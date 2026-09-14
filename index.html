@@ -617,20 +617,111 @@ body, button, input, textarea { font-size: var(--font-ui) !important; }
 }
 
 
-/* Block formatting fix */
-.special-block{display:block!important;border:1px solid var(--line)!important;border-left:3px solid var(--block-accent)!important;background:var(--bg)!important;overflow:hidden!important;border-radius:3px!important;margin:12px 0!important}
-.block-head{display:flex!important;align-items:center!important;gap:8px!important;background:var(--panel-2)!important;border-bottom:1px solid var(--line)!important;padding:6px 8px!important;min-height:40px!important}
-.block-title{display:inline-block!important;color:var(--text)!important;font-weight:800!important}
-.block-count{display:inline-block!important;color:var(--text-faint)!important;border:0!important;background:transparent!important}
-.block-tools{display:flex!important;gap:4px!important;margin-left:auto!important}
-.block-tools button{min-height:28px!important}
-.block-content{display:block!important;padding:10px 12px!important;background:var(--bg)!important}
-.special-block.collapsed .block-content{display:none!important}
-@media(max-width:720px){
- .block-head{flex-wrap:wrap!important}
- .block-tools{width:100%!important;margin-left:0!important}
- .block-tools .remove-block{display:inline-flex!important}
+/* Stable block layout */
+.special-block{
+  display:block!important;
+  width:100%!important;
+  margin:12px 0!important;
+  overflow:hidden!important;
+  background:var(--bg)!important;
+  border:1px solid var(--line)!important;
+  border-left:3px solid var(--block-accent)!important;
+  border-radius:3px!important;
+  contain:layout paint;
 }
+.block-head{
+  display:flex!important;
+  align-items:center!important;
+  flex-wrap:nowrap!important;
+  gap:8px!important;
+  min-height:40px!important;
+  padding:6px 8px!important;
+  background:var(--panel-2)!important;
+  border-bottom:1px solid var(--line)!important;
+}
+.block-title{
+  display:inline-block!important;
+  flex:0 0 auto!important;
+  color:var(--text)!important;
+  font-weight:800!important;
+  white-space:nowrap!important;
+}
+.block-count{
+  display:inline-block!important;
+  min-width:0!important;
+  overflow:hidden!important;
+  color:var(--text-faint)!important;
+  background:transparent!important;
+  border:0!important;
+  text-overflow:ellipsis!important;
+  white-space:nowrap!important;
+}
+.block-tools{
+  display:flex!important;
+  flex:0 0 auto!important;
+  gap:4px!important;
+  width:auto!important;
+  margin-left:auto!important;
+}
+.block-tools button{min-height:28px!important}
+.block-tools .remove-block{display:inline-flex!important}
+.block-content{
+  display:block!important;
+  min-width:0!important;
+  padding:10px 12px!important;
+  background:var(--bg)!important;
+}
+.special-block.collapsed .block-content{display:none!important}
+.special-body,.special-block .text-highlight{
+  box-sizing:border-box!important;
+  width:100%!important;
+  max-width:100%!important;
+}
+@media(max-width:720px){
+  .block-head{
+    flex-wrap:nowrap!important;
+    align-items:center!important;
+  }
+  .block-title{max-width:29%;overflow:hidden;text-overflow:ellipsis}
+  .block-count{flex:1 1 auto!important}
+  .block-tools{
+    display:flex!important;
+    flex:0 0 auto!important;
+    width:auto!important;
+    margin-left:auto!important;
+  }
+  .block-tools button{
+    min-height:32px!important;
+    padding:4px 6px!important;
+  }
+  .block-content{padding:9px 8px 10px!important}
+}
+
+/* Supabase cloud panel */
+.cloud-modal-backdrop{display:none;position:fixed;inset:0;z-index:40;background:rgba(0,0,0,.62)}
+.cloud-modal-backdrop.open{display:block}
+.cloud-modal{display:none;position:fixed;z-index:41;top:50%;left:50%;width:min(520px,calc(100vw - 24px));max-height:86dvh;overflow:auto;transform:translate(-50%,-50%);background:var(--bg);border:1px solid var(--line)}
+.cloud-modal.open{display:block}
+.cloud-modal-head{display:flex;align-items:center;min-height:42px;padding:6px 10px;border-bottom:1px solid var(--line);color:var(--copper)}
+.cloud-modal-head button{margin-left:auto;width:30px;min-height:30px;padding:0}
+.cloud-modal-body{display:grid;gap:9px;padding:12px}
+.cloud-modal label{display:grid;gap:5px;color:var(--text-faint);font-size:10px;text-transform:uppercase;letter-spacing:.08em}
+.cloud-modal input,.cloud-modal textarea{width:100%;padding:8px;color:var(--text);background:var(--input);border:1px solid var(--line);border-radius:3px}
+.cloud-modal textarea{min-height:240px;resize:vertical;font-size:11px;line-height:1.45;text-transform:none}
+.cloud-config-actions,.cloud-auth-actions,.cloud-sync-actions{display:flex;flex-wrap:wrap;gap:6px}
+.cloud-divider{height:1px;background:var(--line);margin:3px 0}
+.cloud-state{margin:0;padding:8px;color:var(--text-dim);background:var(--panel);border-left:2px solid var(--text-faint)}
+.cloud-state.ok{border-left-color:var(--copper);color:var(--text)}
+.cloud-state.error{border-left-color:var(--danger)}
+.cloud-modal details{border-top:1px solid var(--line);padding-top:9px}
+.cloud-modal summary{cursor:pointer;color:var(--text-dim);margin-bottom:8px}
+#cloud-btn.connected{color:var(--copper);border-color:var(--copper)}
+@media(max-width:720px){
+ .cloud-modal{top:auto;bottom:0;left:0;width:100%;max-height:88dvh;transform:none;border-left:0;border-right:0;border-bottom:0}
+ .cloud-modal-body{padding-bottom:calc(14px + env(safe-area-inset-bottom))}
+ .cloud-config-actions button,.cloud-auth-actions button,.cloud-sync-actions button{min-height:42px;flex:1}
+}
+
 </style>
 </head>
 <body>
@@ -640,6 +731,7 @@ body, button, input, textarea { font-size: var(--font-ui) !important; }
     <div class="win-dots"><span></span><span></span><span></span></div>
     <div class="path"><span class="prompt">~/</span><b>scenar</b><span class="ext">.io</span></div>
     <div class="status" id="status" role="status" aria-live="polite"><span class="status-dot"></span><span id="status-text">načítám…</span></div>
+    <button type="button" id="cloud-btn" title="Cloud synchronizace">cloud</button>
     <button type="button" id="copy-btn">kopírovat</button>
     <button type="button" id="export-btn" class="primary">stáhnout .txt</button>
   </div>
@@ -707,8 +799,50 @@ body, button, input, textarea { font-size: var(--font-ui) !important; }
     <button type="button" data-mobile-action="more"><span>více</span></button>
   </nav>
 
+  <div class="cloud-modal-backdrop" id="cloud-modal-backdrop"></div>
+  <section class="cloud-modal" id="cloud-modal" aria-hidden="true" aria-label="Nastavení Supabase">
+    <header class="cloud-modal-head"><strong>supabase</strong><button type="button" id="cloud-close" aria-label="Zavřít">×</button></header>
+    <div class="cloud-modal-body">
+      <label>Project URL<input id="supabase-url" type="url" placeholder="https://example.supabase.co" autocomplete="url"></label>
+      <label>Anon public key<input id="supabase-key" type="password" placeholder="eyJ..." autocomplete="off"></label>
+      <div class="cloud-config-actions"><button type="button" id="cloud-save-config">uložit připojení</button><button type="button" id="cloud-test">otestovat</button></div>
+      <div class="cloud-divider"></div>
+      <label>E-mail<input id="cloud-email" type="email" placeholder="name@example.com" autocomplete="email"></label>
+      <label>Heslo<input id="cloud-password" type="password" minlength="6" autocomplete="current-password"></label>
+      <div class="cloud-auth-actions"><button type="button" id="cloud-sign-in">přihlásit</button><button type="button" id="cloud-sign-up">vytvořit účet</button><button type="button" id="cloud-sign-out">odhlásit</button></div>
+      <p class="cloud-state" id="cloud-state">cloud není nastaven</p>
+      <div class="cloud-sync-actions"><button type="button" id="cloud-upload">uložit do cloudu</button><button type="button" id="cloud-download">načíst z cloudu</button></div>
+      <details><summary>SQL pro Supabase</summary><textarea id="supabase-sql" readonly>create table public.documents (
+  id uuid primary key,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  title text not null default 'scenar.io',
+  payload jsonb not null default '{}'::jsonb,
+  updated_at timestamptz not null default now()
+);
+
+alter table public.documents enable row level security;
+
+create policy "users read own documents"
+on public.documents for select
+using (auth.uid() = user_id);
+
+create policy "users insert own documents"
+on public.documents for insert
+with check (auth.uid() = user_id);
+
+create policy "users update own documents"
+on public.documents for update
+using (auth.uid() = user_id)
+with check (auth.uid() = user_id);
+
+create policy "users delete own documents"
+on public.documents for delete
+using (auth.uid() = user_id);</textarea><button type="button" id="copy-sql">kopírovat SQL</button></details>
+    </div>
+  </section>
   <div class="footer" id="footer">0 řádků · 0 znaků</div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 (function(){
   'use strict';
@@ -719,6 +853,9 @@ body, button, input, textarea { font-size: var(--font-ui) !important; }
   const charList=document.getElementById('char-list');
   const STORAGE_KEY='vn-editor:blocks:v2';
   let characters=[], collapsed={}, saveTimer=null, lastStatus={text:'',state:'saved'}, cards=[], activeCardId=null;
+  const CLOUD_CONFIG_KEY='scenar.io:supabase';
+  const CLOUD_DOCUMENT_KEY='scenar.io:document-id';
+  let supabaseClient=null, cloudUser=null, cloudSaveTimer=null;
 
   const storage={
     async get(k){ if(window.storage?.get) return window.storage.get(k,false); return {value:localStorage.getItem(k)}; },
@@ -900,31 +1037,57 @@ body, button, input, textarea { font-size: var(--font-ui) !important; }
 
   function addRow(wrap,ta){
     const type=wrap.dataset.type;
+    const editorScroll=editor.scrollTop;
+    const blockTopBefore=wrap.getBoundingClientRect().top;
+    let caret=ta.value.length;
+
     if(type==='choice'){
-      const lines=ta.value.split('\n');
-      const branchIndex=lines.findIndex(line=>/^=\s*[A-Z]\s*$/.test(line.trim()));
-      const optionArea=branchIndex<0?lines:lines.slice(0,branchIndex);
-      const used=optionArea.map(line=>line.trim().match(/^([A-Z])\s+\S/)).filter(Boolean).map(m=>m[1].charCodeAt(0));
+      const lines=ta.value.replace(/\s+$/,'').split('\n');
+      let branchIndex=lines.findIndex(line=>/^=\s*[A-Z]\s*$/.test(line.trim()));
+      if(branchIndex<0) branchIndex=lines.length;
+
+      const used=lines.slice(0,branchIndex)
+        .map(line=>line.trim().match(/^([A-Z])\s+\S/))
+        .filter(Boolean)
+        .map(match=>match[1].charCodeAt(0));
       const letter=String.fromCharCode(Math.min(90,Math.max(64,...used)+1));
-      const actualBranch=lines.findIndex(line=>/^=\s*[A-Z]\s*$/.test(line.trim()));
-      lines.splice(actualBranch<0?lines.length:actualBranch,0,letter+' Nová možnost','');
-      lines.push('', '= '+letter, '');
-      ta.value=lines.join('\n').replace(/\n{4,}/g,'\n\n\n');
+
+      while(branchIndex>0 && lines[branchIndex-1]===''){
+        lines.splice(branchIndex-1,1);
+        branchIndex--;
+      }
+      lines.splice(branchIndex,0,letter+' Nová možnost','');
+      const branchText='= '+letter+'\n';
+      const body=lines.join('\n').replace(/\n{4,}/g,'\n\n\n').replace(/\s+$/,'');
+      ta.value=body+'\n\n'+branchText;
+      caret=ta.value.length;
     } else if(type==='dice'){
       const ranges=[...ta.value.matchAll(/^(\d+)\s*-\s*(\d+)\s*$/gm)];
       const last=ranges.length?ranges[ranges.length-1]:null;
       const start=last?Number(last[2])+1:1;
       const width=last?Math.max(0,Number(last[2])-Number(last[1])):2;
       ta.value=ta.value.replace(/\s+$/,'')+'\n\n'+start+' - '+(start+width)+'\nNový výsledek';
+      caret=ta.value.length;
     } else {
       const numbers=parseSurfaceItems(ta.value).map(item=>item.target.match(/^(\d+)A$/i)).filter(Boolean).map(match=>Number(match[1]));
       const target=(numbers.length?Math.max(...numbers)+1:1)+'A';
       ta.value=ta.value.replace(/\s+$/,'')+'\n- click Nový objekt -> Scéna '+target;
       insertSurfaceScene(wrap,target);
+      caret=ta.value.length;
     }
-    autoHeight(ta); updateHighlight(ta); updateBlock(wrap); changed(); ta.focus(); ta.setSelectionRange(ta.value.length,ta.value.length);
-  }
 
+    autoHeight(ta);
+    updateHighlight(ta);
+    updateBlock(wrap);
+    changed();
+    ta.focus({preventScroll:true});
+    ta.setSelectionRange(caret,caret);
+
+    requestAnimationFrame(()=>{
+      const blockTopAfter=wrap.getBoundingClientRect().top;
+      editor.scrollTop=editorScroll+(blockTopAfter-blockTopBefore);
+    });
+  }
   function insertBlock(type){
     const templates={
       choice:'A První možnost\nB Druhá možnost\n\n= A\n\n= B',
@@ -977,7 +1140,15 @@ body, button, input, textarea { font-size: var(--font-ui) !important; }
   function ensureTextSegment(){ if(!editor.children.length) editor.appendChild(createSegment({type:'text',content:''},0)); }
   function changed(){ updateFooter();setStatus('ukládání…','saving');clearTimeout(saveTimer);saveTimer=setTimeout(save,500); }
   function updateFooter(){ const v=serialize(); footer.textContent=(v? v.split('\n').length:0)+' řádků · '+v.length+' znaků · '+editor.querySelectorAll('.special-block').length+' bloků'; }
-  async function save(){ try{captureActiveCard();await storage.set(STORAGE_KEY,JSON.stringify({cards,activeCardId,characters,collapsed,updatedAt:new Date().toISOString()}));setStatus('uloženo '+new Date().toLocaleTimeString('cs-CZ',{hour:'2-digit',minute:'2-digit'}));}catch(e){setStatus('chyba ukládání','error');} }
+  async function save(){
+    try{
+      captureActiveCard();
+      const snapshot={cards,activeCardId,characters,collapsed,updatedAt:new Date().toISOString()};
+      await storage.set(STORAGE_KEY,JSON.stringify(snapshot));
+      setStatus('uloženo '+new Date().toLocaleTimeString('cs-CZ',{hour:'2-digit',minute:'2-digit'}));
+      queueCloudSave();
+    }catch(e){setStatus('chyba ukládání','error');}
+  }
   function renderCharacters(){
     charList.innerHTML='';
     if(!characters.length){
@@ -1070,14 +1241,17 @@ body, button, input, textarea { font-size: var(--font-ui) !important; }
       <button type="button" data-more="focus">režim soustředění</button>
     </div>`);
   }
-  document.querySelector('.mobile-nav').addEventListener('click',event=>{
-    const action=event.target.closest('[data-mobile-action]')?.dataset.mobileAction;
-    if(action==='characters') side(true);
-    if(action==='cards') mobileCardsMenu();
-    if(action==='insert') mobileInsertMenu();
-    if(action==='scenes') mobileScenesMenu();
-    if(action==='more') mobileMoreMenu();
-  });
+  const mobileNav=document.querySelector('.mobile-nav');
+  if(mobileNav){
+    mobileNav.addEventListener('click',event=>{
+      const action=event.target.closest('[data-mobile-action]')?.dataset.mobileAction;
+      if(action==='characters') side(true);
+      if(action==='cards') mobileCardsMenu();
+      if(action==='insert') mobileInsertMenu();
+      if(action==='scenes') mobileScenesMenu();
+      if(action==='more') mobileMoreMenu();
+    });
+  }
   mobileSheetContent.addEventListener('click',event=>{
     const insert=event.target.closest('[data-insert]')?.dataset.insert;
     if(insert){
@@ -1102,7 +1276,105 @@ body, button, input, textarea { font-size: var(--font-ui) !important; }
   window.addEventListener('resize',()=>{if(!isMobile()){closeMobileSheet();document.body.classList.remove('mobile-focus');}});
   document.addEventListener('keydown',event=>{if(event.key==='Escape')closeMobileSheet();});
 
+  const cloudModal=document.getElementById('cloud-modal');
+  const cloudBackdrop=document.getElementById('cloud-modal-backdrop');
+  const cloudState=document.getElementById('cloud-state');
+  const cloudButton=document.getElementById('cloud-btn');
+  const cloudUrl=document.getElementById('supabase-url');
+  const cloudKey=document.getElementById('supabase-key');
+  const cloudEmail=document.getElementById('cloud-email');
+  const cloudPassword=document.getElementById('cloud-password');
+
+  function setCloudState(text,type=''){
+    cloudState.textContent=text;
+    cloudState.className='cloud-state'+(type?' '+type:'');
+    cloudButton.classList.toggle('connected',Boolean(cloudUser));
+  }
+  function getCloudConfig(){
+    try{return JSON.parse(localStorage.getItem(CLOUD_CONFIG_KEY)||'null')}catch{return null}
+  }
+  function saveCloudConfig(){
+    const config={url:cloudUrl.value.trim(),key:cloudKey.value.trim()};
+    if(!config.url||!config.key){setCloudState('doplň Project URL a anon key','error');return false;}
+    localStorage.setItem(CLOUD_CONFIG_KEY,JSON.stringify(config));
+    initSupabase();
+    return true;
+  }
+  function initSupabase(){
+    const config=getCloudConfig();
+    if(!config?.url||!config?.key||!window.supabase){supabaseClient=null;setCloudState('cloud není nastaven');return false;}
+    try{
+      supabaseClient=window.supabase.createClient(config.url,config.key,{auth:{persistSession:true,autoRefreshToken:true}});
+      cloudUrl.value=config.url; cloudKey.value=config.key;
+      supabaseClient.auth.getSession().then(({data})=>{cloudUser=data.session?.user||null;setCloudState(cloudUser?'přihlášen: '+cloudUser.email:'připojeno, uživatel není přihlášen',cloudUser?'ok':'');});
+      supabaseClient.auth.onAuthStateChange((_event,session)=>{cloudUser=session?.user||null;setCloudState(cloudUser?'přihlášen: '+cloudUser.email:'připojeno, uživatel není přihlášen',cloudUser?'ok':'');});
+      return true;
+    }catch(error){supabaseClient=null;setCloudState('chyba připojení: '+error.message,'error');return false;}
+  }
+  function cloudDocumentId(){
+    let id=localStorage.getItem(CLOUD_DOCUMENT_KEY);
+    if(!id){id=crypto.randomUUID();localStorage.setItem(CLOUD_DOCUMENT_KEY,id);}
+    return id;
+  }
+  function cloudPayload(){captureActiveCard();return {cards,activeCardId,characters,collapsed,version:2};}
+  async function uploadCloud(showMessage=true){
+    if(!supabaseClient||!cloudUser){if(showMessage)setCloudState('nejdřív se přihlas','error');return false;}
+    const row={id:cloudDocumentId(),user_id:cloudUser.id,title:'scenar.io',payload:cloudPayload(),updated_at:new Date().toISOString()};
+    const {error}=await supabaseClient.from('documents').upsert(row,{onConflict:'id'});
+    if(error){setCloudState('cloud save selhal: '+error.message,'error');return false;}
+    if(showMessage)setCloudState('cloud uložen: '+new Date().toLocaleTimeString('cs-CZ',{hour:'2-digit',minute:'2-digit'}),'ok');
+    return true;
+  }
+  function queueCloudSave(){
+    if(!supabaseClient||!cloudUser)return;
+    clearTimeout(cloudSaveTimer);
+    cloudSaveTimer=setTimeout(()=>uploadCloud(false),1000);
+  }
+  async function downloadCloud(){
+    if(!supabaseClient||!cloudUser){setCloudState('nejdřív se přihlas','error');return;}
+    const {data,error}=await supabaseClient.from('documents').select('payload,updated_at').eq('id',cloudDocumentId()).maybeSingle();
+    if(error){setCloudState('načtení selhalo: '+error.message,'error');return;}
+    if(!data){setCloudState('v cloudu zatím není uložený dokument','error');return;}
+    const payload=data.payload||{};
+    cards=Array.isArray(payload.cards)&&payload.cards.length?payload.cards:cards;
+    activeCardId=payload.activeCardId&&cards.some(card=>card.id===payload.activeCardId)?payload.activeCardId:cards[0]?.id;
+    characters=Array.isArray(payload.characters)?payload.characters:characters;
+    collapsed=payload.collapsed||{};
+    renderCharacters();renderTabs();render(currentCard()?.content||'');await save();
+    setCloudState('cloud načten: '+new Date(data.updated_at).toLocaleString('cs-CZ'),'ok');
+    closeCloudModal();
+  }
+  function openCloudModal(){cloudModal.classList.add('open');cloudBackdrop.classList.add('open');cloudModal.setAttribute('aria-hidden','false');}
+  function closeCloudModal(){cloudModal.classList.remove('open');cloudBackdrop.classList.remove('open');cloudModal.setAttribute('aria-hidden','true');}
+
+  cloudButton.onclick=openCloudModal;
+  document.getElementById('cloud-close').onclick=closeCloudModal;
+  cloudBackdrop.onclick=closeCloudModal;
+  document.getElementById('cloud-save-config').onclick=saveCloudConfig;
+  document.getElementById('cloud-test').onclick=async()=>{
+    if(!supabaseClient&&!saveCloudConfig())return;
+    const {error}=await supabaseClient.from('documents').select('id',{head:true,count:'exact'}).limit(1);
+    setCloudState(error?'test selhal: '+error.message:'připojení funguje',error?'error':'ok');
+  };
+  document.getElementById('cloud-sign-in').onclick=async()=>{
+    if(!supabaseClient&&!saveCloudConfig())return;
+    const {error}=await supabaseClient.auth.signInWithPassword({email:cloudEmail.value.trim(),password:cloudPassword.value});
+    if(error)setCloudState('přihlášení selhalo: '+error.message,'error');
+  };
+  document.getElementById('cloud-sign-up').onclick=async()=>{
+    if(!supabaseClient&&!saveCloudConfig())return;
+    const {data,error}=await supabaseClient.auth.signUp({email:cloudEmail.value.trim(),password:cloudPassword.value});
+    if(error)setCloudState('registrace selhala: '+error.message,'error');
+    else setCloudState(data.session?'účet vytvořen a přihlášen':'účet vytvořen, zkontroluj e-mail','ok');
+  };
+  document.getElementById('cloud-sign-out').onclick=async()=>{if(supabaseClient)await supabaseClient.auth.signOut();};
+  document.getElementById('cloud-upload').onclick=()=>uploadCloud(true);
+  document.getElementById('cloud-download').onclick=downloadCloud;
+  document.getElementById('copy-sql').onclick=async()=>{await navigator.clipboard.writeText(document.getElementById('supabase-sql').value);setCloudState('SQL zkopírováno','ok');};
+  document.addEventListener('keydown',event=>{if(event.key==='Escape')closeCloudModal();});
+
   async function init(){
+    initSupabase();
     let legacyContent='';
     try{
       const r=await storage.get(STORAGE_KEY);
