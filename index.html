@@ -1,0 +1,1112 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>scenar.io — editor</title>
+<style>
+
+:root {
+  --bg: #1d1e1c;
+  --panel: #232421;
+  --panel-2: #2b2b27;
+  --input: #181917;
+  --line: #45443d;
+  --line-soft: #35352f;
+  --text: #ede2d0;
+  --text-dim: #b8ad9b;
+  --text-faint: #7e786d;
+  --copper: #c8a46b;
+  --copper-strong: #d8b679;
+  --choice: #b38ca5;
+  --dice: #c3ad86;
+  --surface: #9b8d78;
+  --danger: #c87d69;
+  --accent-scene: var(--copper-strong);
+  --accent-name: var(--copper);
+  --accent-action: #aaa294;
+  --accent-choice: var(--choice);
+  --accent-label: var(--surface);
+  --border: var(--line);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  color: var(--text);
+  background: var(--bg);
+  font-family: ui-monospace, "SFMono-Regular", "Cascadia Code", Consolas, "Liberation Mono", monospace;
+}
+::selection { background: rgba(200,164,107,.32); color: var(--text); }
+* { scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
+*::-webkit-scrollbar { width: 8px; height: 8px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb { background: var(--line); border-radius: 4px; }
+
+button, input, textarea { font: inherit; }
+button {
+  min-height: 32px;
+  padding: 6px 10px;
+  color: var(--text-dim);
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+button:hover { color: var(--text); background: var(--panel-2); border-color: var(--text-faint); }
+button:active { background: var(--input); }
+button:focus-visible, input:focus-visible, textarea:focus-visible {
+  outline: 1px solid var(--copper);
+  outline-offset: 2px;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+  padding: 7px 12px;
+  flex: 0 0 auto;
+  background: var(--bg);
+  border-bottom: 1px solid var(--line);
+}
+.win-dots { display: none; }
+.topbar .path {
+  display: flex;
+  align-items: center;
+  color: var(--text-faint);
+  font-size: 14px;
+  letter-spacing: .025em;
+  white-space: nowrap;
+}
+.topbar .path .prompt { color: var(--copper); }
+.topbar .path b, .topbar .path .ext { color: var(--text); font-weight: 800; }
+.topbar .path::after { content: "_"; color: var(--copper); margin-left: 2px; }
+.status { display: flex; align-items: center; gap: 7px; margin-left: auto; color: var(--text-faint); font-size: 11px; }
+.status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text-faint); }
+.status.saving .status-dot { background: var(--copper); }
+.status.saved .status-dot { background: var(--copper); }
+.status.error .status-dot { background: var(--danger); }
+.topbar > button:not(#sidebar-toggle) { min-height: 30px; padding: 5px 9px; text-transform: lowercase; }
+button.primary { color: var(--copper-strong); border-color: #725c3c; }
+button.primary:hover { color: var(--text); border-color: var(--copper); background: #2b251d; }
+#sidebar-toggle { display: none; }
+
+.main { display: flex; flex: 1 1 auto; min-height: 0; background: var(--bg); }
+.sidebar {
+  width: 276px;
+  flex: 0 0 276px;
+  padding: 16px 14px;
+  overflow-y: auto;
+  background: var(--bg);
+  border-right: 1px solid var(--line);
+}
+.sidebar h2, .menu-label {
+  margin: 0 0 9px;
+  color: var(--text-faint);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .15em;
+  text-transform: uppercase;
+}
+.sidebar h2::before, .menu-label::before { content: "// "; color: var(--copper); }
+.char-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 6px 4px;
+  color: var(--text-dim);
+  border-bottom: 1px solid var(--line-soft);
+}
+.char-row:hover { background: var(--panel); }
+.char-dot { width: 8px; height: 8px; flex: 0 0 8px; border-radius: 50%; box-shadow: none !important; }
+.char-row .shortcut { min-width: 18px; color: var(--text-faint); font-size: 10px; }
+.char-row .name { flex: 1; overflow: hidden; color: var(--copper); font-size: 12px; font-weight: 800; text-overflow: ellipsis; white-space: nowrap; text-shadow: none !important; }
+.char-row .remove { min-height: 24px; padding: 1px 6px; border: 0; color: var(--text-faint); }
+.char-row .remove:hover { color: var(--danger); background: transparent; }
+.char-empty { padding: 7px 0; color: var(--text-faint); font-size: 12px; }
+.add-char { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; }
+.add-char .row { display: flex; align-items: center; gap: 6px; }
+.add-char input[type="text"] {
+  min-width: 0;
+  min-height: 32px;
+  padding: 6px 8px;
+  color: var(--text);
+  background: var(--input);
+  border: 1px solid var(--line);
+  border-radius: 3px;
+}
+.add-char input[name="shortcut"] { width: 46px; flex: 0 0 46px; text-align: center; }
+.add-char input[name="charname"] { width: 0; flex: 1 1 auto; }
+#new-color, .color-edit {
+  appearance: auto;
+  -webkit-appearance: auto;
+  display: block;
+  width: 30px !important;
+  min-width: 30px !important;
+  height: 30px !important;
+  padding: 2px !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
+  cursor: pointer;
+  background: var(--bg) !important;
+  border: 1px solid var(--line) !important;
+  border-radius: 3px !important;
+  box-shadow: none !important;
+}
+.add-char > button { width: 100%; color: var(--copper); border-color: #6d593c; }
+.insert-menu { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--line); }
+.menu-label { margin-top: 11px; margin-bottom: 6px; }
+.insert-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin: 0; }
+.insert-buttons.interaction-actions { grid-template-columns: 1fr; }
+.insert-buttons button { display: flex; align-items: center; justify-content: flex-start; width: 100%; min-width: 0; min-height: 35px; }
+.insert-buttons button span { margin-right: 6px; color: var(--copper); }
+.hint { display: none; }
+
+.editor-shell { display: flex; flex: 1 1 auto; flex-direction: column; min-width: 0; overflow: hidden; background: var(--bg); }
+.document-tabs {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  min-height: 42px;
+  padding: 0 9px;
+  overflow: hidden;
+  background: var(--bg);
+  border-bottom: 1px solid var(--line);
+}
+.tabs-scroll { display: flex; align-items: flex-end; min-width: 0; overflow-x: auto; scrollbar-width: none; }
+.tabs-scroll::-webkit-scrollbar { display: none; }
+.doc-tab {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 96px;
+  max-width: 210px;
+  height: 38px;
+  padding: 0 9px 0 12px;
+  color: var(--text-faint);
+  border: 0;
+  border-radius: 0;
+}
+.doc-tab.active { color: var(--text); background: var(--panel-2); border-bottom: 2px solid var(--copper); }
+.doc-tab.active::before { content: ">"; color: var(--copper); font-weight: 900; }
+.doc-tab .tab-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.doc-tab .tab-close { width: 20px; min-height: 20px; margin-left: auto; padding: 0; border: 0; color: var(--text-faint); }
+.tab-add { width: 30px; min-width: 30px; height: 30px; min-height: 30px; margin: 0 0 4px 4px; padding: 0; color: var(--copper); }
+
+.block-editor { width: 100%; height: 100%; margin: 0; padding: 16px 18px 80px; overflow: auto; overflow-x: hidden; }
+.block-editor > [data-segment], .editable-wrap, .special-block { width: 100%; max-width: none; }
+.editable-wrap { position: relative; isolation: isolate; }
+.text-highlight {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  margin: 0;
+  padding: 5px 6px;
+  overflow: hidden;
+  color: var(--text);
+  font: inherit;
+  font-size: 14.5px;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  word-break: break-word;
+  pointer-events: none;
+  opacity: 1;
+}
+.text-segment, .special-body {
+  position: relative;
+  z-index: 2;
+  display: block;
+  width: 100%;
+  min-width: 0;
+  min-height: 1.7em;
+  margin: 0;
+  padding: 5px 6px;
+  overflow: hidden;
+  color: transparent !important;
+  -webkit-text-fill-color: transparent !important;
+  caret-color: var(--text) !important;
+  background: transparent;
+  border: 0;
+  outline: 0;
+  resize: none;
+  font-size: 14.5px;
+  line-height: 1.7;
+  white-space: pre-wrap;
+}
+.text-segment { margin-bottom: 6px; }
+.text-segment:focus, .special-body:focus { background: rgba(255,255,255,.012); }
+.text-highlight .scene { color: var(--copper-strong); font-weight: 800; }
+.text-highlight .action { color: var(--accent-action); font-style: italic; }
+.text-highlight .speaker { color: var(--copper); font-weight: 900; letter-spacing: .02em; filter: none !important; text-shadow: none !important; }
+.text-highlight .dialogue-text { color: var(--text); }
+.text-highlight .option-key, .text-highlight .branch-marker { color: var(--choice); font-weight: 900; }
+.text-highlight .option-text { color: var(--text); }
+.text-highlight .dice-range { color: var(--dice); font-weight: 850; }
+.text-highlight .surface-command, .text-highlight .surface-arrow { color: var(--text-faint); }
+.text-highlight .surface-label { color: var(--text); font-weight: 750; }
+.text-highlight .surface-target { color: var(--copper); font-weight: 750; }
+
+.special-block {
+  --block-accent: var(--copper);
+  margin: 15px 0 19px;
+  overflow: hidden;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--block-accent);
+  border-radius: 3px;
+  box-shadow: none;
+}
+.special-block.choice { --block-accent: var(--choice); --block-color: var(--choice); }
+.special-block.dice { --block-accent: var(--dice); --block-color: var(--dice); }
+.special-block.surface { --block-accent: var(--surface); --block-color: var(--surface); }
+.block-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 7px 10px;
+  background: var(--panel-2);
+  border-bottom: 1px solid var(--line);
+}
+.block-head .collapse { width: 25px; min-height: 25px; padding: 0; color: var(--block-accent); background: transparent; border: 0; }
+.block-title { color: var(--text); font-size: 11px; font-weight: 900; letter-spacing: .13em; }
+.block-count { padding: 2px 6px; color: var(--text-dim); font-size: 10px; background: var(--bg); border: 1px solid var(--line); border-radius: 2px; }
+.block-tools { display: flex; gap: 5px; margin-left: auto; }
+.block-tools button { min-height: 28px; padding: 4px 8px; background: var(--panel); }
+.block-tools .add-row { color: var(--block-accent); border-color: var(--block-accent); }
+.block-tools .remove-block { color: var(--text-faint); }
+.block-content { padding: 14px 16px 16px; background: var(--bg); }
+.special-body { min-height: 72px; }
+.special-block.collapsed .block-content { display: none; }
+.special-block.collapsed .block-head { border-bottom: 0; }
+.surface-preview { margin-top: 13px; padding: 11px; background: var(--panel); border: 1px solid var(--line); border-radius: 2px; }
+.surface-preview-title { margin-bottom: 9px; color: var(--text-faint); font-size: 9px; letter-spacing: .13em; text-transform: uppercase; }
+.surface-preview-title::before { content: "// "; color: var(--copper); }
+.surface-items { display: grid; grid-template-columns: repeat(auto-fit,minmax(230px,1fr)); gap: 7px; }
+.surface-hotspot { display: grid; grid-template-columns: minmax(0,1fr) auto auto; align-items: center; gap: 9px; width: 100%; min-height: 38px; text-align: left; background: var(--bg); }
+.hotspot-label { overflow: hidden; color: var(--text); font-weight: 700; text-overflow: ellipsis; }
+.hotspot-arrow { color: var(--text-faint); }
+.hotspot-target { color: var(--copper); font-size: 11px; }
+.footer { flex: 0 0 auto; padding: 5px 14px; color: var(--text-faint); background: var(--bg); border-top: 1px solid var(--line); font-size: 10px; }
+.sidebar-backdrop { display: none; position: fixed; inset: 0; z-index: 9; background: rgba(0,0,0,.5); }
+.sidebar-backdrop.open { display: block; }
+
+/* No decorative motion. The static underscore in the brand is intentional. */
+*, *::before, *::after { animation: none !important; transition: none !important; }
+
+@media (max-width: 1024px) {
+  .sidebar { width: 250px; flex-basis: 250px; }
+  .block-editor { padding: 14px 14px 72px; }
+}
+@media (max-width: 720px) {
+  .topbar { flex-wrap: wrap; gap: 7px; padding: 7px 9px; }
+  .topbar .path { flex: 1; min-width: 0; }
+  .status { order: 5; flex-basis: 100%; margin-left: 0; }
+  .topbar > button { min-height: 38px; }
+  #sidebar-toggle { display: inline-flex; align-items: center; justify-content: center; min-width: 38px; padding: 0; }
+  .sidebar { position: fixed; inset: 0 auto 0 0; z-index: 10; width: 86%; max-width: 300px; transform: translateX(-100%); box-shadow: none; }
+  .sidebar.open { transform: translateX(0); }
+  .document-tabs { min-height: 40px; padding-left: 7px; }
+  .doc-tab { min-width: 88px; max-width: 145px; height: 36px; }
+  .block-editor { padding: 10px 8px 62px; }
+  .text-highlight, .text-segment, .special-body { font-size: 16px; }
+  .special-block { margin: 10px 0 14px; }
+  .block-head { flex-wrap: wrap; }
+  .block-tools { width: 100%; margin: 2px 0 0 28px; display: grid; grid-template-columns: 1fr auto; }
+  .block-content { padding: 11px; }
+  .surface-items { grid-template-columns: 1fr; }
+  .surface-hotspot { grid-template-columns: minmax(0,1fr) auto; }
+  .hotspot-arrow { display: none; }
+}
+
+
+/* Unified compact typography */
+:root {
+  --font-ui: 11px;
+  --font-editor: 12.5px;
+  --font-meta: 9.5px;
+  --line-ui: 1.35;
+  --line-editor: 1.62;
+}
+body, button, input, textarea { font-size: var(--font-ui) !important; }
+.topbar .path,
+.topbar button,
+.status,
+.sidebar,
+.char-row,
+.char-row .name,
+.char-row .shortcut,
+.add-char input,
+.add-char button,
+.menu-label,
+.sidebar h2,
+.insert-buttons button,
+.doc-tab,
+.tab-add,
+.block-title,
+.block-count,
+.block-tools button,
+.surface-preview-title,
+.surface-hotspot,
+.footer,
+.char-empty {
+  font-size: var(--font-ui) !important;
+  line-height: var(--line-ui) !important;
+}
+.topbar .path { font-weight: 700 !important; }
+.sidebar h2, .menu-label, .surface-preview-title, .footer, .status, .block-count {
+  font-size: var(--font-meta) !important;
+}
+.text-highlight,
+.text-segment,
+.special-body {
+  font-size: var(--font-editor) !important;
+  line-height: var(--line-editor) !important;
+}
+.text-highlight .scene,
+.text-highlight .speaker,
+.text-highlight .dialogue-text,
+.text-highlight .option-key,
+.text-highlight .option-text,
+.text-highlight .branch-marker,
+.text-highlight .dice-range,
+.text-highlight .surface-command,
+.text-highlight .surface-label,
+.text-highlight .surface-arrow,
+.text-highlight .surface-target {
+  font-size: inherit !important;
+  line-height: inherit !important;
+}
+/* Compact dimensions matching the smaller type scale */
+.topbar { min-height: 42px; padding: 5px 10px; }
+.topbar > button:not(#sidebar-toggle) { min-height: 28px; padding: 4px 8px; }
+.sidebar { width: 264px; flex-basis: 264px; padding: 14px 12px; }
+.char-row { min-height: 34px; }
+.add-char input[type="text"] { min-height: 30px; }
+.add-char > button, .insert-buttons button { min-height: 32px; }
+.document-tabs { min-height: 38px; }
+.doc-tab { height: 34px; }
+.tab-add { width: 28px; min-width: 28px; height: 28px; min-height: 28px; }
+.block-editor { padding: 13px 15px 72px; }
+.block-head { min-height: 39px; padding: 5px 8px; }
+.block-head .collapse { width: 23px; min-height: 23px; }
+.block-tools button { min-height: 25px; padding: 3px 7px; }
+.block-content { padding: 11px 13px 13px; }
+.special-body { min-height: 62px; }
+.surface-hotspot { min-height: 34px; }
+@media (max-width: 1024px) {
+  .sidebar { width: 242px; flex-basis: 242px; }
+}
+@media (max-width: 720px) {
+  body, button, input, textarea { font-size: 12px !important; }
+  .text-highlight, .text-segment, .special-body { font-size: 16px !important; }
+  .sidebar { width: 86%; max-width: 290px; }
+  .block-editor { padding: 9px 7px 58px; }
+}
+
+
+/* Final terminal polish: blinking brand + integrated blocks */
+@keyframes terminal-caret {
+  0%, 46% { opacity: 1; }
+  47%, 100% { opacity: 0; }
+}
+.topbar .path::after {
+  content: "_";
+  display: inline-block;
+  width: .65em;
+  margin-left: 2px;
+  color: var(--copper);
+  animation: terminal-caret 1.05s steps(1, end) infinite !important;
+}
+
+/* Blocks follow the same terminal language as the rest of scenar.io. */
+.special-block {
+  --block-accent: var(--copper);
+  margin: 12px 0 16px !important;
+  overflow: visible !important;
+  background: transparent !important;
+  border: 0 !important;
+  border-left: 2px solid var(--block-accent) !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+.special-block.choice { --block-accent: var(--choice); }
+.special-block.dice { --block-accent: var(--dice); }
+.special-block.surface { --block-accent: var(--surface); }
+.block-head {
+  min-height: 32px !important;
+  padding: 3px 6px 4px 8px !important;
+  gap: 7px !important;
+  background: transparent !important;
+  border: 0 !important;
+  border-bottom: 1px solid var(--line-soft) !important;
+}
+.block-head .collapse {
+  width: 20px !important;
+  min-height: 20px !important;
+  padding: 0 !important;
+  color: var(--block-accent) !important;
+  background: transparent !important;
+  border: 0 !important;
+}
+.block-title {
+  color: var(--block-accent) !important;
+  font-size: var(--font-meta) !important;
+  font-weight: 800 !important;
+  line-height: var(--line-ui) !important;
+  letter-spacing: .12em !important;
+}
+.block-title::before { content: "// "; color: var(--text-faint); }
+.block-count {
+  padding: 0 !important;
+  color: var(--text-faint) !important;
+  font-size: var(--font-meta) !important;
+  line-height: var(--line-ui) !important;
+  background: transparent !important;
+  border: 0 !important;
+}
+.block-tools { gap: 4px !important; }
+.block-tools button {
+  min-height: 23px !important;
+  padding: 2px 6px !important;
+  color: var(--text-faint) !important;
+  font-size: var(--font-meta) !important;
+  background: transparent !important;
+  border-color: var(--line-soft) !important;
+}
+.block-tools .add-row {
+  color: var(--block-accent) !important;
+  border-color: color-mix(in srgb, var(--block-accent) 55%, var(--line)) !important;
+}
+.block-tools button:hover {
+  color: var(--text) !important;
+  background: var(--panel) !important;
+  border-color: var(--block-accent) !important;
+}
+.block-content {
+  padding: 9px 9px 10px 12px !important;
+  background: transparent !important;
+}
+.special-body { min-height: 54px !important; }
+.special-block.collapsed .block-head { border-bottom: 0 !important; }
+
+/* PLOCHA preview is a terminal list, not a card inside a card. */
+.surface-preview {
+  margin: 8px 0 0 !important;
+  padding: 8px 0 0 !important;
+  background: transparent !important;
+  border: 0 !important;
+  border-top: 1px dashed var(--line-soft) !important;
+}
+.surface-preview-title {
+  margin-bottom: 6px !important;
+  color: var(--text-faint) !important;
+  font-size: var(--font-meta) !important;
+}
+.surface-items { gap: 4px !important; }
+.surface-hotspot {
+  min-height: 29px !important;
+  padding: 4px 7px !important;
+  background: transparent !important;
+  border-color: var(--line-soft) !important;
+  border-radius: 2px !important;
+}
+.surface-hotspot:hover {
+  background: var(--panel) !important;
+  border-color: var(--block-accent) !important;
+}
+.hotspot-label, .hotspot-target { font-size: var(--font-ui) !important; }
+
+@media (prefers-reduced-motion: reduce) {
+  .topbar .path::after { animation: none !important; opacity: 1; }
+}
+@media (max-width: 720px) {
+  .block-head { align-items: center !important; }
+  .block-tools {
+    width: 100% !important;
+    margin: 3px 0 0 27px !important;
+  }
+  .block-content { padding: 8px 7px 9px 10px !important; }
+}
+
+
+/* Mobile application shell. Hidden entirely on desktop. */
+.mobile-nav,.mobile-sheet,.mobile-sheet-backdrop{display:none}
+@media(max-width:720px){
+  :root{--mobile-nav-h:58px}
+  html,body{height:100%;height:100dvh;overscroll-behavior:none}
+  body{min-height:100dvh;padding-bottom:env(safe-area-inset-bottom)}
+  .topbar{
+    min-height:44px!important;
+    padding:6px 8px!important;
+    flex-wrap:nowrap!important;
+    gap:6px!important;
+  }
+  .topbar .path{min-width:0;overflow:hidden;text-overflow:ellipsis;font-size:12px!important}
+  .topbar .status{order:initial!important;flex:0 0 auto!important;margin-left:auto!important;font-size:0!important}
+  .topbar .status-dot{width:7px;height:7px}
+  #copy-btn,#export-btn{display:none!important}
+  #sidebar-toggle{display:none!important}
+
+  .main{min-height:0;padding-bottom:var(--mobile-nav-h)}
+  .editor-shell{width:100%;min-width:0}
+  .document-tabs{min-height:38px!important;height:38px!important;padding:0 6px!important}
+  .doc-tab{min-width:82px!important;max-width:132px!important;height:36px!important;padding:0 7px!important}
+  .doc-tab .tab-close{width:18px;min-height:18px}
+  .tab-add{width:28px!important;min-width:28px!important;height:28px!important;min-height:28px!important;margin-bottom:4px!important}
+  .block-editor{padding:8px 6px calc(var(--mobile-nav-h) + 20px)!important;scroll-padding-bottom:calc(var(--mobile-nav-h) + 20px)}
+  .text-highlight,.text-segment,.special-body{font-size:16px!important;line-height:1.55!important}
+  .special-block{margin:9px 0 12px!important}
+  .block-head{min-height:38px!important;padding:5px 7px!important;flex-wrap:nowrap!important}
+  .block-title{font-size:10px!important;white-space:nowrap}
+  .block-count{font-size:9px!important;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .block-tools{width:auto!important;margin-left:auto!important;display:flex!important;flex:0 0 auto}
+  .block-tools button{min-height:32px!important;padding:4px 7px!important;font-size:10px!important}
+  .block-tools .remove-block{display:none}
+  .block-content{padding:8px 7px 10px!important}
+  .surface-items{grid-template-columns:1fr!important}
+  .surface-hotspot{min-height:42px!important}
+  .footer{display:none!important}
+
+  .mobile-nav{
+    position:fixed;z-index:20;left:0;right:0;bottom:0;
+    display:grid;grid-template-columns:repeat(5,1fr);align-items:stretch;
+    min-height:var(--mobile-nav-h);padding:5px 5px calc(5px + env(safe-area-inset-bottom));
+    background:color-mix(in srgb,var(--bg) 94%,transparent);border-top:1px solid var(--line);
+    backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)
+  }
+  .mobile-nav button{min-width:0;min-height:46px;padding:4px 2px;border:0;border-radius:3px;font-size:10px;color:var(--text-faint)}
+  .mobile-nav button:active,.mobile-nav button.active{color:var(--copper);background:var(--panel)}
+  .mobile-nav .mobile-add{color:var(--copper);font-weight:800;border:1px solid #6d593c}
+
+  .mobile-sheet-backdrop{position:fixed;z-index:21;inset:0;display:block;visibility:hidden;opacity:0;background:rgba(0,0,0,.56);pointer-events:none}
+  .mobile-sheet-backdrop.open{visibility:visible;opacity:1;pointer-events:auto}
+  .mobile-sheet{
+    position:fixed;z-index:22;left:0;right:0;bottom:0;display:flex;flex-direction:column;
+    max-height:min(72dvh,620px);padding-bottom:env(safe-area-inset-bottom);
+    visibility:hidden;transform:translateY(100%);background:var(--bg);border-top:1px solid var(--line)
+  }
+  .mobile-sheet.open{visibility:visible;transform:translateY(0)}
+  .mobile-sheet-head{display:flex;align-items:center;min-height:46px;padding:7px 10px;border-bottom:1px solid var(--line)}
+  .mobile-sheet-head strong{font-size:10px;letter-spacing:.13em;text-transform:uppercase;color:var(--text-dim)}
+  .mobile-sheet-head button{margin-left:auto;width:34px;min-height:34px;padding:0}
+  .mobile-sheet-content{padding:8px;overflow:auto;overscroll-behavior:contain}
+  .mobile-menu-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+  .mobile-menu-grid button{min-height:48px;text-align:left;color:var(--text);background:var(--panel)}
+  .mobile-list{display:grid;gap:4px}
+  .mobile-list button{display:flex;align-items:center;width:100%;min-height:46px;text-align:left}
+  .mobile-list button.current{color:var(--copper);border-color:var(--copper)}
+  .mobile-list small{margin-left:auto;color:var(--text-faint)}
+
+  body.mobile-focus .topbar,body.mobile-focus .document-tabs,body.mobile-focus .mobile-nav{display:none!important}
+  body.mobile-focus .main{padding-bottom:0}
+  body.mobile-focus .block-editor{padding-bottom:24px!important}
+  body.mobile-focus .special-block:not(:focus-within),body.mobile-focus .block-editor>[data-segment]:not(:focus-within){opacity:.28}
+}
+@media(max-width:390px){
+  .block-editor{padding-left:4px!important;padding-right:4px!important}
+  .block-tools button{padding-left:5px!important;padding-right:5px!important}
+  .mobile-nav button{font-size:9px}
+}
+
+</style>
+</head>
+<body>
+
+  <div class="topbar">
+    <button type="button" id="sidebar-toggle" title="Postavy" aria-label="Otevřít panel postav" aria-controls="sidebar" aria-expanded="false">☰</button>
+    <div class="win-dots"><span></span><span></span><span></span></div>
+    <div class="path"><span class="prompt">~/</span><b>scenar</b><span class="ext">.io</span></div>
+    <div class="status" id="status" role="status" aria-live="polite"><span class="status-dot"></span><span id="status-text">načítám…</span></div>
+    <button type="button" id="copy-btn">kopírovat</button>
+    <button type="button" id="export-btn" class="primary">stáhnout .txt</button>
+  </div>
+
+  <div class="main">
+    <div class="sidebar-backdrop" id="sidebar-backdrop"></div>
+    <aside class="sidebar" id="sidebar" aria-label="Panel postav">
+      <h2>Postavy</h2>
+      <div id="char-list"></div>
+
+      <div class="add-char">
+        <div class="row">
+          <input type="text" name="shortcut" id="new-shortcut" maxlength="4" placeholder="b">
+          <input type="text" name="charname" id="new-name" placeholder="jméno postavy">
+          <input type="color" id="new-color" value="#c8a46b" title="Barva postavy" aria-label="Barva postavy">
+        </div>
+        <button type="button" id="add-char-btn">+ přidat postavu</button>
+      </div>
+
+      <div class="insert-menu">
+        <div class="menu-label">Obsah</div>
+        <div class="insert-buttons basic-actions">
+          <button type="button" id="insert-scene"><span>＋</span> Scéna</button>
+          <button type="button" id="insert-action"><span>＋</span> Akce</button>
+        </div>
+        <div class="menu-label">Interakce</div>
+        <div class="insert-buttons interaction-actions">
+          <button type="button" id="insert-choice"><span>＋</span> Volba</button>
+          <button type="button" id="insert-dice"><span>＋</span> Hod kostkou</button>
+          <button type="button" id="insert-surface"><span>＋</span> Plocha</button>
+        </div>
+      </div>
+
+      <div class="hint">
+        <b>Rychlá nápověda</b><br>
+        <code>#</code> scéna · <code>//</code> akce<br>
+        <code>b:</code> vloží postavu<br>
+        Bloky přidáš tlačítky výše.
+      </div>
+    </aside>
+
+    <main class="editor-shell" id="editor-shell">
+      <nav class="document-tabs" aria-label="Karty dokumentu">
+        <div class="tabs-scroll" id="tabs-list"></div>
+        <button type="button" class="tab-add" id="add-tab" title="Přidat kartu" aria-label="Přidat kartu">+</button>
+      </nav>
+      <div id="editor" class="block-editor" aria-label="Editor scénáře"></div>
+    </main>
+  </div>
+
+  <div class="mobile-sheet-backdrop" id="mobile-sheet-backdrop"></div>
+  <section class="mobile-sheet" id="mobile-sheet" aria-hidden="true" aria-label="Mobilní nabídka">
+    <header class="mobile-sheet-head">
+      <strong id="mobile-sheet-title">rychlé vložení</strong>
+      <button type="button" id="mobile-sheet-close" aria-label="Zavřít nabídku">×</button>
+    </header>
+    <div class="mobile-sheet-content" id="mobile-sheet-content"></div>
+  </section>
+
+  <nav class="mobile-nav" aria-label="Mobilní navigace">
+    <button type="button" data-mobile-action="characters"><span>postavy</span></button>
+    <button type="button" data-mobile-action="cards"><span>karty</span></button>
+    <button type="button" class="mobile-add" data-mobile-action="insert"><span>přidat</span></button>
+    <button type="button" data-mobile-action="scenes"><span>scény</span></button>
+    <button type="button" data-mobile-action="more"><span>více</span></button>
+  </nav>
+
+  <div class="footer" id="footer">0 řádků · 0 znaků</div>
+
+<script>
+(function(){
+  'use strict';
+  const editor=document.getElementById('editor');
+  const statusEl=document.getElementById('status');
+  const statusText=document.getElementById('status-text');
+  const footer=document.getElementById('footer');
+  const charList=document.getElementById('char-list');
+  const STORAGE_KEY='vn-editor:blocks:v2';
+  let characters=[], collapsed={}, saveTimer=null, lastStatus={text:'',state:'saved'}, cards=[], activeCardId=null;
+
+  const storage={
+    async get(k){ if(window.storage?.get) return window.storage.get(k,false); return {value:localStorage.getItem(k)}; },
+    async set(k,v){ if(window.storage?.set) return window.storage.set(k,v,false); localStorage.setItem(k,v); }
+  };
+  const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  const autoHeight=el=>{ el.style.height='auto'; el.style.height=Math.max(28,el.scrollHeight)+'px'; };
+  function setStatus(text,state='saved'){ lastStatus={text,state}; statusText.textContent=text; statusEl.className='status '+state; }
+  function flash(text){ statusText.textContent=text; statusEl.className='status error'; setTimeout(()=>setStatus(lastStatus.text,lastStatus.state),1500); }
+
+  function renderLine(line){
+    const safe=esc(line);
+    if(/^#/.test(line)) return '<span class="scene">'+safe+'</span>';
+    if(/^\s*\/\//.test(line)) return '<span class="action">'+safe+'</span>';
+
+    const dialogue=line.match(/^([^:\n]{1,50}):(.*)$/);
+    if(dialogue){
+      const character=characters.find(c=>c.name.trim().toLocaleUpperCase('cs-CZ')===dialogue[1].trim().toLocaleUpperCase('cs-CZ'));
+      if(character){
+        const color=esc(character.color||'#c8a46b');
+        return '<span class="dialogue-line"><span class="speaker" style="color:'+color+'">'+esc(dialogue[1])+':</span><span class="dialogue-text">'+esc(dialogue[2])+'</span></span>';
+      }
+    }
+
+    const option=line.match(/^([A-Z])\s+(.+)$/);
+    if(option) return '<span class="option-key">'+esc(option[1])+'</span><span class="option-text"> '+esc(option[2])+'</span>';
+    const branch=line.match(/^=\s*([A-Z])\s*$/);
+    if(branch) return '<span class="branch-marker">= '+esc(branch[1])+'</span>';
+    const range=line.match(/^(\d+)\s*-\s*(\d+)\s*$/);
+    if(range) return '<span class="dice-range">'+safe+'</span>';
+    const surface=line.match(/^([-*]\s*(?:click|klik)\s+)(.+?)(\s*(?:=>|->|—>|→)\s*)(.+)$/i);
+    if(surface) return '<span class="surface-command">'+esc(surface[1])+'</span><span class="surface-label">'+esc(surface[2])+'</span><span class="surface-arrow">'+esc(surface[3])+'</span><span class="surface-target">'+esc(surface[4])+'</span>';
+    return safe || ' ';
+  }
+  function updateHighlight(ta){
+    const mirror=ta.parentElement?.querySelector('.text-highlight');
+    if(!mirror)return;
+    mirror.innerHTML=ta.value.split('\n').map(renderLine).join('\n');
+    mirror.scrollTop=ta.scrollTop; mirror.scrollLeft=ta.scrollLeft;
+  }
+  function refreshHighlights(){ editor.querySelectorAll('textarea').forEach(updateHighlight); }
+
+  function cardId(){ return 'card-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,7); }
+  function currentCard(){ return cards.find(card=>card.id===activeCardId); }
+  function captureActiveCard(){ const card=currentCard(); if(card && editor.children.length) card.content=serialize(); }
+  function renderTabs(){
+    const list=document.getElementById('tabs-list'); list.innerHTML='';
+    cards.forEach(card=>{
+      const tab=document.createElement('button'); tab.type='button'; tab.className='doc-tab'+(card.id===activeCardId?' active':''); tab.dataset.id=card.id;
+      tab.innerHTML='<span class="tab-name">'+esc(card.title)+'</span><span class="tab-close" role="button" aria-label="Zavřít kartu">×</span>';
+      tab.querySelector('.tab-name').ondblclick=e=>{ e.stopPropagation(); renameCard(card); };
+      tab.querySelector('.tab-close').onclick=e=>{ e.stopPropagation(); removeCard(card.id); };
+      tab.onclick=()=>switchCard(card.id);
+      list.appendChild(tab);
+    });
+    requestAnimationFrame(()=>list.querySelector('.active')?.scrollIntoView({block:'nearest',inline:'nearest'}));
+  }
+  function switchCard(id){
+    if(id===activeCardId)return;
+    captureActiveCard(); activeCardId=id; renderTabs(); render(currentCard()?.content||''); changed();
+  }
+  function addCard(title){
+    captureActiveCard();
+    const card={id:cardId(),title:title||'Nová karta',content:''}; cards.push(card); activeCardId=card.id; renderTabs(); render(''); changed();
+    requestAnimationFrame(()=>renameCard(card));
+  }
+  function renameCard(card){
+    const name=prompt('Název karty:',card.title);
+    if(name!==null && name.trim()){card.title=name.trim();renderTabs();changed();}
+  }
+  function removeCard(id){
+    if(cards.length===1){flash('Dokument musí mít alespoň jednu kartu');return;}
+    const card=cards.find(c=>c.id===id); if(!confirm('Odstranit kartu „'+card.title+'“?'))return;
+    const index=cards.findIndex(c=>c.id===id); cards.splice(index,1);
+    if(activeCardId===id){activeCardId=cards[Math.max(0,index-1)].id;render(currentCard().content||'');}
+    renderTabs();changed();
+  }
+  document.getElementById('add-tab').onclick=()=>addCard();
+
+  function parseDocument(text){
+    const lines=String(text||'').replace(/\r/g,'').split('\n');
+    const out=[]; let normal=[];
+    const flush=()=>{ if(normal.length){ out.push({type:'text',content:normal.join('\n')}); normal=[]; } };
+    for(let i=0;i<lines.length;i++){
+      const m=lines[i].trim().match(/^====\s*(VOLBA|HOD KOSTKOU|PLOCHA)\s*====$/i);
+      if(!m){ normal.push(lines[i]); continue; }
+      flush();
+      const label=m[1].toUpperCase();
+      const type=label==='VOLBA'?'choice':label==='PLOCHA'?'surface':'dice';
+      const end=type==='choice'?/^====\s*KONEC VOLBY\s*====$/i:type==='surface'?/^====\s*KONEC PLOCHY\s*====$/i:/^====\s*KONEC (?:HODU|HODU KOSTKOU|KOSTKY)\s*====$/i;
+      const body=[]; i++;
+      while(i<lines.length&&!end.test(lines[i].trim())){ body.push(lines[i]); i++; }
+      out.push({type,content:body.join('\n'),id:blockId(type,body.join('\n'),out.length)});
+    }
+    flush();
+    return out.length?out:[{type:'text',content:''}];
+  }
+  function blockId(type,content,index){ let h=2166136261; const str=type+'|'+content.slice(0,120)+'|'+index; for(let i=0;i<str.length;i++){h^=str.charCodeAt(i);h=Math.imul(h,16777619)} return type+'-'+(h>>>0).toString(36); }
+  function serialize(){
+    return [...editor.querySelectorAll('[data-segment]')].map(el=>{
+      const type=el.dataset.type, value=el.querySelector('textarea').value;
+      if(type==='text') return value;
+      const marks={choice:['====VOLBA====','====KONEC VOLBY===='],dice:['====HOD KOSTKOU====','====KONEC HODU===='],surface:['====PLOCHA====','====KONEC PLOCHY====']};
+      return marks[type][0]+'\n'+value+'\n'+marks[type][1];
+    }).join('\n');
+  }
+  function countFor(type,value){
+    if(type==='choice') return (value.split('\n').filter(x=>/^[A-Z]\s+\S/.test(x.trim())&&!/^=/.test(x.trim()))).length;
+    if(type==='dice') return value.split('\n').filter(x=>/^\d+\s*-\s*\d+$/.test(x.trim())).length;
+    return value.split('\n').filter(x=>/^[-*]\s*(?:click|klik)\s+/i.test(x.trim())).length;
+  }
+  function countLabel(type,n){ return type==='choice'?`${n} možnost${n===1?'':n>=2&&n<=4?'i':'í'}`:type==='dice'?`${n} výsledk${n===1?'ek':n>=2&&n<=4?'y':'ů'}`:`${n} aktivní ${n===1?'bod':'body'}`; }
+  function render(text){
+    editor.innerHTML=''; parseDocument(text).forEach((seg,i)=>editor.appendChild(createSegment(seg,i)));
+    updateFooter();
+  }
+  function createSegment(seg,index){
+    const wrap=document.createElement(seg.type==='text'?'div':'section');
+    wrap.dataset.segment=''; wrap.dataset.type=seg.type;
+    if(seg.type==='text'){
+      wrap.innerHTML=`<div class="editable-wrap"><pre class="text-highlight" aria-hidden="true"></pre><textarea class="text-segment" spellcheck="false" aria-label="Text scénáře">${esc(seg.content)}</textarea></div>`;
+    }else{
+      const titles={choice:'VOLBA',dice:'HOD KOSTKOU',surface:'PLOCHA'};
+      const actions={choice:'+ možnost',dice:'+ výsledek',surface:'+ interakce'};
+      const id=seg.id||blockId(seg.type,seg.content,index); wrap.dataset.id=id;
+      wrap.className=`special-block ${seg.type}${collapsed[id]?' collapsed':''}`;
+      wrap.innerHTML=`<header class="block-head"><button type="button" class="collapse" aria-label="Sbalit nebo rozbalit">${collapsed[id]?'▶':'▼'}</button><span class="block-title">${titles[seg.type]}</span><span class="block-count"></span><div class="block-tools"><button type="button" class="add-row">${actions[seg.type]}</button><button type="button" class="remove-block">odstranit</button></div></header><div class="block-content"><div class="editable-wrap"><pre class="text-highlight" aria-hidden="true"></pre><textarea class="special-body" spellcheck="false" aria-label="Obsah bloku ${titles[seg.type]}">${esc(seg.content)}</textarea></div>${seg.type==='surface'?'<div class="surface-preview"><div class="surface-preview-title">Interaktivní náhled plochy</div><div class="surface-items"></div></div>':''}</div>`;
+    }
+    const ta=wrap.querySelector('textarea');
+    requestAnimationFrame(()=>{autoHeight(ta);updateHighlight(ta)});
+    ta.addEventListener('input',()=>{ expandShortcut(ta); autoHeight(ta); updateHighlight(ta); updateBlock(wrap); changed(); });
+    ta.addEventListener('keydown',e=>handleTab(e,ta));
+    if(seg.type!=='text'){
+      wrap.querySelector('.collapse').onclick=()=>{ const open=wrap.classList.toggle('collapsed'); collapsed[wrap.dataset.id]=open; wrap.querySelector('.collapse').textContent=open?'▶':'▼'; changed(); };
+      wrap.querySelector('.add-row').onclick=()=>addRow(wrap,ta);
+      wrap.querySelector('.remove-block').onclick=()=>{ if(confirm('Odstranit celý blok?')){wrap.remove();ensureTextSegment();changed();} };
+      updateBlock(wrap);
+    }
+    return wrap;
+  }
+  function updateBlock(wrap){
+    if(wrap.dataset.type==='text') return;
+    const ta=wrap.querySelector('textarea'), n=countFor(wrap.dataset.type,ta.value);
+    wrap.querySelector('.block-count').textContent='· '+countLabel(wrap.dataset.type,n);
+    if(wrap.dataset.type==='surface') renderSurface(wrap,ta.value);
+  }
+  function parseSurfaceItems(value){
+    const rx=/^[-*]\s*(?:click|klik)\s+(.+?)\s*(?:=>|->|—>|→)\s*(?:sc[eé]na\s+)?(.+?)\s*$/i;
+    return value.split('\n').map(line=>line.trim().match(rx)).filter(Boolean).map(match=>({label:match[1].trim(),target:match[2].trim()}));
+  }
+  function renderSurface(wrap,value){
+    const host=wrap.querySelector('.surface-items');
+    host.innerHTML='';
+    const items=parseSurfaceItems(value);
+    items.forEach(item=>{
+      const button=document.createElement('button');
+      button.type='button';
+      button.className='surface-hotspot object';
+      button.innerHTML='<span class="hotspot-label">'+esc(item.label)+'</span><span class="hotspot-arrow">→</span><span class="hotspot-target">Scéna '+esc(item.target)+'</span>';
+      button.title='Přejít na scénu '+item.target;
+      button.onclick=()=>jumpToScene(item.target);
+      host.appendChild(button);
+    });
+    if(!items.length) host.innerHTML='<span class="char-empty">Formát: - click Název -&gt; Scéna 1A</span>';
+  }
+  function insertSurfaceScene(surfaceBlock,target){
+    const clean=String(target).replace(/^sc[eé]na\s+/i,'').trim();
+    const escaped=clean.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+    if(new RegExp('^#\\s*(?:Sc[eé]na\\s+)?'+escaped+'\\s*$','im').test(serialize())) return;
+    let textSegment=surfaceBlock.nextElementSibling;
+    if(!textSegment || textSegment.dataset.type!=='text'){
+      textSegment=createSegment({type:'text',content:''},editor.children.length);
+      surfaceBlock.after(textSegment);
+    }
+    const field=textSegment.querySelector('textarea');
+    field.value=(field.value.trimEnd()+'\n\n# Scéna '+clean+'\n// Popis reakce po kliknutí.\n').replace(/^\n+/, '');
+    autoHeight(field); updateHighlight(field);
+  }
+
+  function addRow(wrap,ta){
+    const type=wrap.dataset.type;
+    if(type==='choice'){
+      const lines=ta.value.split('\n');
+      const branchIndex=lines.findIndex(line=>/^=\s*[A-Z]\s*$/.test(line.trim()));
+      const optionArea=branchIndex<0?lines:lines.slice(0,branchIndex);
+      const used=optionArea.map(line=>line.trim().match(/^([A-Z])\s+\S/)).filter(Boolean).map(m=>m[1].charCodeAt(0));
+      const letter=String.fromCharCode(Math.min(90,Math.max(64,...used)+1));
+      const actualBranch=lines.findIndex(line=>/^=\s*[A-Z]\s*$/.test(line.trim()));
+      lines.splice(actualBranch<0?lines.length:actualBranch,0,letter+' Nová možnost','');
+      lines.push('', '= '+letter, '');
+      ta.value=lines.join('\n').replace(/\n{4,}/g,'\n\n\n');
+    } else if(type==='dice'){
+      const ranges=[...ta.value.matchAll(/^(\d+)\s*-\s*(\d+)\s*$/gm)];
+      const last=ranges.length?ranges[ranges.length-1]:null;
+      const start=last?Number(last[2])+1:1;
+      const width=last?Math.max(0,Number(last[2])-Number(last[1])):2;
+      ta.value=ta.value.replace(/\s+$/,'')+'\n\n'+start+' - '+(start+width)+'\nNový výsledek';
+    } else {
+      const numbers=parseSurfaceItems(ta.value).map(item=>item.target.match(/^(\d+)A$/i)).filter(Boolean).map(match=>Number(match[1]));
+      const target=(numbers.length?Math.max(...numbers)+1:1)+'A';
+      ta.value=ta.value.replace(/\s+$/,'')+'\n- click Nový objekt -> Scéna '+target;
+      insertSurfaceScene(wrap,target);
+    }
+    autoHeight(ta); updateHighlight(ta); updateBlock(wrap); changed(); ta.focus(); ta.setSelectionRange(ta.value.length,ta.value.length);
+  }
+
+  function insertBlock(type){
+    const templates={
+      choice:'A První možnost\nB Druhá možnost\n\n= A\n\n= B',
+      dice:'1 - 3\nNeúspěch\n\n4 - 6\nÚspěch',
+      surface:'- click Mavris -> Scéna 1A\n- click Ruda -> Scéna 2A\n- click Vavřinec -> Scéna 3A'
+    };
+    const active=document.activeElement?.closest?.('[data-segment]');
+    const node=createSegment({type,content:templates[type],id:blockId(type,Date.now().toString(),editor.children.length)},editor.children.length);
+    active?active.after(node):editor.appendChild(node);
+    if(type==='surface'){
+      const scenes=createSegment({type:'text',content:'\n# Scéna 1A\n// Popis reakce po kliknutí na Mavrise.\n\n# Scéna 2A\n// Popis reakce po kliknutí na Rudu.\n\n# Scéna 3A\n// Popis reakce po kliknutí na Vavřince.\n'},editor.children.length);
+      node.after(scenes);
+    }
+    updateHighlight(node.querySelector('textarea')); changed(); node.querySelector('textarea').focus();
+  }
+
+  function insertPlain(prefix){ let ta=document.activeElement; if(!ta?.matches('textarea')){ const seg=createSegment({type:'text',content:''},0); editor.appendChild(seg); ta=seg.querySelector('textarea'); } const p=ta.selectionStart; ta.value=ta.value.slice(0,p)+(p&&ta.value[p-1]!='\n'?'\n':'')+prefix+ta.value.slice(p); autoHeight(ta);changed();ta.focus(); }
+  function jumpToScene(title){
+    const clean=String(title).replace(/^sc[eé]na\s+/i,'').trim();
+    const escaped=clean.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+    const patterns=[
+      new RegExp('^#\\s*Sc[eé]na\\s+'+escaped+'\\s*$','im'),
+      new RegExp('^#\\s*'+escaped+'\\s*$','im'),
+      new RegExp('^'+escaped+'\\s*$','im')
+    ];
+    for(const field of editor.querySelectorAll('textarea')){
+      let match=null;
+      for(const pattern of patterns){match=field.value.match(pattern);if(match)break;}
+      if(match){field.focus();field.setSelectionRange(match.index,match.index+match[0].length);field.scrollIntoView({behavior:'smooth',block:'center'});return;}
+    }
+    flash('scéna "'+clean+'" nenalezena');
+  }
+
+  function expandShortcut(ta){
+    const end=ta.selectionStart;
+    const start=ta.value.lastIndexOf('\n',end-1)+1;
+    const typed=ta.value.slice(start,end);
+    const match=typed.match(/^\s*([\p{L}\p{N}_-]+):$/u);
+    if(!match)return;
+    const key=match[1].toLocaleLowerCase('cs-CZ');
+    const character=characters.find(c=>String(c.shortcut).toLocaleLowerCase('cs-CZ')===key);
+    if(!character)return;
+    const leading=typed.match(/^\s*/)[0];
+    const replacement=leading+character.name.toLocaleUpperCase('cs-CZ')+': ';
+    ta.value=ta.value.slice(0,start)+replacement+ta.value.slice(end);
+    const pos=start+replacement.length;
+    ta.setSelectionRange(pos,pos);
+  }
+  function handleTab(e,ta){ if(e.key!=='Tab')return;e.preventDefault();const p=ta.selectionStart;ta.value=ta.value.slice(0,p)+'  '+ta.value.slice(ta.selectionEnd);ta.setSelectionRange(p+2,p+2);autoHeight(ta);changed(); }
+  function ensureTextSegment(){ if(!editor.children.length) editor.appendChild(createSegment({type:'text',content:''},0)); }
+  function changed(){ updateFooter();setStatus('ukládání…','saving');clearTimeout(saveTimer);saveTimer=setTimeout(save,500); }
+  function updateFooter(){ const v=serialize(); footer.textContent=(v? v.split('\n').length:0)+' řádků · '+v.length+' znaků · '+editor.querySelectorAll('.special-block').length+' bloků'; }
+  async function save(){ try{captureActiveCard();await storage.set(STORAGE_KEY,JSON.stringify({cards,activeCardId,characters,collapsed,updatedAt:new Date().toISOString()}));setStatus('uloženo '+new Date().toLocaleTimeString('cs-CZ',{hour:'2-digit',minute:'2-digit'}));}catch(e){setStatus('chyba ukládání','error');} }
+  function renderCharacters(){
+    charList.innerHTML='';
+    if(!characters.length){
+      charList.innerHTML='<div class="char-empty">Zatím žádné postavy.</div>';
+      return;
+    }
+    characters.forEach((character,index)=>{
+      const row=document.createElement('div');
+      row.className='char-row';
+      const color=character.color||'#c8a46b';
+      row.innerHTML=`<span class="char-dot" style="background:${esc(color)}"></span><span class="shortcut">${esc(character.shortcut)}:</span><span class="name" style="color:${esc(color)}">${esc(character.name.toUpperCase())}</span><input class="color-edit" type="color" value="${esc(color)}" title="Změnit barvu postavy" aria-label="Barva postavy ${esc(character.name)}"><button type="button" class="remove" aria-label="Odebrat postavu">×</button>`;
+
+      const picker=row.querySelector('.color-edit');
+      const dot=row.querySelector('.char-dot');
+      const name=row.querySelector('.name');
+
+      const applyColor=()=>{
+        character.color=picker.value;
+        dot.style.background=picker.value;
+        name.style.color=picker.value;
+        refreshHighlights();
+        changed();
+      };
+      picker.addEventListener('input',applyColor);
+      picker.addEventListener('change',applyColor);
+      row.querySelector('.remove').addEventListener('click',()=>{
+        characters.splice(index,1);
+        renderCharacters();
+        refreshHighlights();
+        changed();
+      });
+      charList.appendChild(row);
+    });
+  }
+  document.getElementById('add-char-btn').onclick=()=>{const n=document.getElementById('new-name'),k=document.getElementById('new-shortcut'),color=document.getElementById('new-color');const name=n.value.trim();if(!name)return n.focus();const base=(k.value.trim()||name[0]).toLocaleLowerCase('cs-CZ').replace(/[^\p{L}\p{N}_-]/gu,'');let sc=base||'p',suffix=2;while(characters.some(c=>String(c.shortcut).toLocaleLowerCase('cs-CZ')===sc))sc=base+(suffix++);characters.push({name,shortcut:sc,color:color.value});n.value=k.value='';color.value='#c8a46b';renderCharacters();refreshHighlights();changed();n.focus()};
+  document.getElementById('new-name').onkeydown=e=>{if(e.key==='Enter')document.getElementById('add-char-btn').click()};
+  document.getElementById('insert-scene').onclick=()=>insertPlain('# ');
+  document.getElementById('insert-action').onclick=()=>insertPlain('// ');
+  document.getElementById('insert-choice').onclick=()=>insertBlock('choice');
+  document.getElementById('insert-dice').onclick=()=>insertBlock('dice');
+  document.getElementById('insert-surface').onclick=()=>insertBlock('surface');
+  function fullDocument(){captureActiveCard();return cards.map(card=>'# KARTA: '+card.title+'\n'+(card.content||'')).join('\n\n')}
+  function aiHeader(){return ['### AI INSTRUKCE — FORMÁT SCÉNÁŘE ###','# Scénář vizuální novely. Speciální bloky VOLBA, HOD KOSTKOU a PLOCHA zachovej včetně jejich koncových značek.','# Postavy: '+(characters.map(c=>c.name.toUpperCase()).join(', ')||'(žádné)')+'.','### KONEC INSTRUKCÍ ###','',''].join('\n')}
+  document.getElementById('copy-btn').onclick=async()=>{try{await navigator.clipboard.writeText(fullDocument());flash('zkopírováno')}catch(e){flash('kopírování selhalo')}};
+  document.getElementById('export-btn').onclick=()=>{const blob=new Blob([aiHeader()+fullDocument()],{type:'text/plain;charset=utf-8'}),u=URL.createObjectURL(blob),a=document.createElement('a');a.href=u;a.download='scenar-'+new Date().toISOString().slice(0,10)+'.txt';a.click();setTimeout(()=>URL.revokeObjectURL(u),1000)};
+  const sidebar=document.getElementById('sidebar'),backdrop=document.getElementById('sidebar-backdrop'),toggle=document.getElementById('sidebar-toggle');function side(open){sidebar.classList.toggle('open',open);backdrop.classList.toggle('open',open);toggle.setAttribute('aria-expanded',String(open))}toggle.onclick=()=>side(!sidebar.classList.contains('open'));backdrop.onclick=()=>side(false);document.addEventListener('keydown',e=>{if(e.key==='Escape')side(false)});
+  const mobileSheet=document.getElementById('mobile-sheet');
+  const mobileSheetBackdrop=document.getElementById('mobile-sheet-backdrop');
+  const mobileSheetTitle=document.getElementById('mobile-sheet-title');
+  const mobileSheetContent=document.getElementById('mobile-sheet-content');
+  const isMobile=()=>window.matchMedia('(max-width:720px)').matches;
+
+  function closeMobileSheet(){
+    mobileSheet.classList.remove('open');
+    mobileSheetBackdrop.classList.remove('open');
+    mobileSheet.setAttribute('aria-hidden','true');
+    document.body.style.overflow='';
+  }
+  function openMobileSheet(title,html){
+    mobileSheetTitle.textContent=title;
+    mobileSheetContent.innerHTML=html;
+    mobileSheet.classList.add('open');
+    mobileSheetBackdrop.classList.add('open');
+    mobileSheet.setAttribute('aria-hidden','false');
+    document.body.style.overflow='hidden';
+  }
+  function mobileInsertMenu(){
+    openMobileSheet('rychlé vložení',`<div class="mobile-menu-grid">
+      <button type="button" data-insert="scene"># scéna</button>
+      <button type="button" data-insert="action">// akce</button>
+      <button type="button" data-insert="choice">volba</button>
+      <button type="button" data-insert="dice">hod kostkou</button>
+      <button type="button" data-insert="surface">plocha</button>
+    </div>`);
+  }
+  function mobileCardsMenu(){
+    const rows=cards.map(card=>`<button type="button" class="${card.id===activeCardId?'current':''}" data-card="${esc(card.id)}"><span>${esc(card.title)}</span>${card.id===activeCardId?'<small>otevřená</small>':''}</button>`).join('');
+    openMobileSheet('karty',`<div class="mobile-list">${rows}<button type="button" data-new-card="1">+ nová karta</button></div>`);
+  }
+  function mobileScenesMenu(){
+    captureActiveCard();
+    const text=currentCard()?.content||'';
+    const scenes=[...text.matchAll(/^#\s*(?:Sc[eé]na\s+)?(.+)$/gmi)].map(match=>match[1].trim());
+    openMobileSheet('scény',`<div class="mobile-list">${scenes.length?scenes.map(scene=>`<button type="button" data-scene="${esc(scene)}"><span># ${esc(scene)}</span></button>`).join(''):'<div class="char-empty">V této kartě nejsou žádné scény.</div>'}</div>`);
+  }
+  function mobileMoreMenu(){
+    openMobileSheet('více',`<div class="mobile-list">
+      <button type="button" data-more="copy">kopírovat scénář</button>
+      <button type="button" data-more="export">stáhnout .txt</button>
+      <button type="button" data-more="focus">režim soustředění</button>
+    </div>`);
+  }
+  document.querySelector('.mobile-nav').addEventListener('click',event=>{
+    const action=event.target.closest('[data-mobile-action]')?.dataset.mobileAction;
+    if(action==='characters') side(true);
+    if(action==='cards') mobileCardsMenu();
+    if(action==='insert') mobileInsertMenu();
+    if(action==='scenes') mobileScenesMenu();
+    if(action==='more') mobileMoreMenu();
+  });
+  mobileSheetContent.addEventListener('click',event=>{
+    const insert=event.target.closest('[data-insert]')?.dataset.insert;
+    if(insert){
+      closeMobileSheet();
+      if(insert==='scene') insertPlain('# ');
+      else if(insert==='action') insertPlain('// ');
+      else insertBlock(insert);
+      return;
+    }
+    const cardId=event.target.closest('[data-card]')?.dataset.card;
+    if(cardId){closeMobileSheet();switchCard(cardId);return;}
+    if(event.target.closest('[data-new-card]')){closeMobileSheet();addCard();return;}
+    const scene=event.target.closest('[data-scene]')?.dataset.scene;
+    if(scene){closeMobileSheet();jumpToScene(scene);return;}
+    const more=event.target.closest('[data-more]')?.dataset.more;
+    if(more==='copy'){closeMobileSheet();document.getElementById('copy-btn').click();}
+    if(more==='export'){closeMobileSheet();document.getElementById('export-btn').click();}
+    if(more==='focus'){closeMobileSheet();document.body.classList.toggle('mobile-focus');}
+  });
+  document.getElementById('mobile-sheet-close').onclick=closeMobileSheet;
+  mobileSheetBackdrop.onclick=closeMobileSheet;
+  window.addEventListener('resize',()=>{if(!isMobile()){closeMobileSheet();document.body.classList.remove('mobile-focus');}});
+  document.addEventListener('keydown',event=>{if(event.key==='Escape')closeMobileSheet();});
+
+  async function init(){
+    let legacyContent='';
+    try{
+      const r=await storage.get(STORAGE_KEY);
+      if(r?.value){
+        const d=JSON.parse(r.value);
+        characters=Array.isArray(d.characters)?d.characters:[]; collapsed=d.collapsed||{}; characters.forEach(c=>{if(!c.color||['#697565','#7fada0','#5ec8a5'].includes(String(c.color).toLowerCase()))c.color='#c8a46b';});
+        if(Array.isArray(d.cards)&&d.cards.length){ cards=d.cards; activeCardId=d.activeCardId&&cards.some(c=>c.id===d.activeCardId)?d.activeCardId:cards[0].id; }
+        else legacyContent=d.content||'';
+      } else {
+        const old=await storage.get('vn-editor:state');
+        if(old?.value){const d=JSON.parse(old.value);legacyContent=d.content||'';characters=d.characters||[];characters.forEach(c=>{if(!c.color||['#697565','#7fada0','#5ec8a5'].includes(String(c.color).toLowerCase()))c.color='#c8a46b';});}
+      }
+    }catch(e){}
+    if(!cards.length){cards=[{id:cardId(),title:'Scénář',content:legacyContent}];activeCardId=cards[0].id;}
+    renderCharacters();renderTabs();render(currentCard().content||'');setStatus(currentCard().content?'načteno':'nový soubor');
+  }
+  window.addEventListener('pagehide',()=>{clearTimeout(saveTimer);save()});init();
+})();
+</script>
+
+</body>
+</html>
