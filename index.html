@@ -939,8 +939,18 @@ alter publication supabase_realtime add table public.documents;</textarea><butto
   sessionStorage.setItem('scenar.io:realtime-client',REALTIME_CLIENT_ID);
 
   const storage={
-    async get(k){ if(window.storage?.get) return window.storage.get(k,false); return {value:localStorage.getItem(k)}; },
-    async set(k,v){ if(window.storage?.set) return window.storage.set(k,v,false); localStorage.setItem(k,v); }
+    async get(k){
+      try{
+        if(window.storage?.get) return window.storage.get(k,false);
+        return {value:localStorage.getItem(k)};
+      }catch(e){ return {value:null}; }
+    },
+    async set(k,v){
+      try{
+        if(window.storage?.set) return window.storage.set(k,v,false);
+        localStorage.setItem(k,v);
+      }catch(e){}
+    }
   };
   const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   const autoHeight=el=>{
@@ -1025,7 +1035,7 @@ alter publication supabase_realtime add table public.documents;</textarea><butto
 
   function cardId(){ return 'card-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,7); }
   function currentCard(){ return cards.find(card=>card.id===activeCardId); }
-  function captureActiveCard(){ const card=currentCard(); if(card && editor.children.length) card.content=serialize(); }
+  function captureActiveCard(){ const card=currentCard(); if(card && appReady) card.content=serialize(); }
   function renderTabs(){
     const list=document.getElementById('tabs-list'); list.innerHTML='';
     cards.forEach(card=>{
@@ -1097,7 +1107,7 @@ alter publication supabase_realtime add table public.documents;</textarea><butto
     if(type==='condition') return /^JINAK\s*$/im.test(value)?2:1;
     return value.split('\n').filter(x=>/^[-*]\s*(?:click|klik)\s+/i.test(x.trim())).length;
   }
-  function countLabel(type,n){ return type==='choice'?`${n} možnost${n===1?'':n>=2&&n<=4?'i':'í'}`:type==='dice'?`${n} výsledk${n===1?'ek':n>=2&&n<=4?'y':'ů'}`:type==='condition'?(n===2?'if / else':'jen if, bez else'):`${n} aktivní ${n===1?'bod':'body'}`; }
+  function countLabel(type,n){ return type==='choice'?`${n} možnost${n===1?'':n>=2&&n<=4?'i':'í'}`:type==='dice'?`${n} výsledk${n===1?'ek':n>=2&&n<=4?'y':'ů'}`:type==='condition'?(n===2?'if / else':'jen if, bez else'):`${n} aktivní ${n===1?'bod':n>=2&&n<=4?'body':'bodů'}`; }
   function render(text){
     editor.innerHTML=''; parseDocument(text).forEach((seg,i)=>editor.appendChild(createSegment(seg,i)));
     updateFooter();
@@ -1127,6 +1137,10 @@ alter publication supabase_realtime add table public.documents;</textarea><butto
       composing=false;requestAnimationFrame(()=>autoHeight(ta));
       updateHighlight(ta);updateBlock(wrap);changed();
     });
+    ta.addEventListener('scroll',()=>{
+      const mirror=wrap.querySelector('.text-highlight');
+      if(mirror){ mirror.scrollTop=ta.scrollTop; mirror.scrollLeft=ta.scrollLeft; }
+    });
     ta.addEventListener('keydown',e=>handleTab(e,ta));
     if(seg.type!=='text'){
       wrap.querySelector('.collapse').onclick=()=>{ const open=wrap.classList.toggle('collapsed'); collapsed[wrap.dataset.id]=open; wrap.querySelector('.collapse').textContent=open?'▶':'▼'; changed(); };
@@ -1148,6 +1162,7 @@ alter publication supabase_realtime add table public.documents;</textarea><butto
   }
   function renderSurface(wrap,value){
     const host=wrap.querySelector('.surface-items');
+    if(!host) return;
     host.innerHTML='';
     const items=parseSurfaceItems(value);
     items.forEach(item=>{
@@ -1254,11 +1269,28 @@ alter publication supabase_realtime add table public.documents;</textarea><butto
       new RegExp('^#\\s*'+escaped+'\\s*$','im'),
       new RegExp('^'+escaped+'\\s*$','im')
     ];
+    
     for(const field of editor.querySelectorAll('textarea')){
       let match=null;
       for(const pattern of patterns){match=field.value.match(pattern);if(match)break;}
-      if(match){field.focus();field.setSelectionRange(match.index,match.index+match[0].length);field.scrollIntoView({behavior:isMobile()?'auto':'smooth',block:'center'});return;}
+      if(match){
+        field.focus();
+        field.setSelectionRange(match.index,match.index+match[0].length);
+        field.scrollIntoView({behavior:isMobile()?'auto':'smooth',block:'center'});
+        return;
+      }
     }
+
+    captureActiveCard();
+    const targetCard=cards.find(c=>{
+      return patterns.some(pattern=>pattern.test(c.content||''));
+    });
+    if(targetCard){
+      switchCard(targetCard.id);
+      requestAnimationFrame(()=>{ jumpToScene(clean); });
+      return;
+    }
+
     flash('scéna "'+clean+'" nenalezena');
   }
 
@@ -1268,7 +1300,7 @@ alter publication supabase_realtime add table public.documents;</textarea><butto
     const seen=new Set();
     return [...text.matchAll(/^#\s*(?:Sc[eé]na\s+)?(.+)$/gmi)]
       .map(match=>match[1].trim())
-      .filter(name=>name&&!seen.has(name.toLocaleLowerCase('cs-CZ'))&&seen.add(name.toLocaleLowerCase('cs-CZ')));
+      .filter(name=>name && !/^KARTA:/i.test(name) && !seen.has(name.toLocaleLowerCase('cs-CZ')) && seen.add(name.toLocaleLowerCase('cs-CZ')));
   }
   function renderSceneNavigator(){
     const host=document.getElementById('scene-list');
@@ -1384,7 +1416,7 @@ alter publication supabase_realtime add table public.documents;</textarea><butto
   }
   function normalizeCharacterName(rawName,mapping){
     if(mapping.has(rawName)) return mapping.get(rawName);
-    const existing=characters.find(c=>c.name.trim().toLocaleLowerCase('cs-CZ')===rawName.toLocaleLowerCase('cs-CZ'));
+    const existing=characters.find(c=>c.name.trim().toLocaleUpperCase('cs-CZ')===rawName.toLocaleUpperCase('cs-CZ'));
     const canonical=existing?existing.name:rawName;
     if(!existing) characters.push({name:rawName,shortcut:suggestImportShortcut(rawName),color:'#c8a46b'});
     mapping.set(rawName,canonical);
@@ -1392,6 +1424,8 @@ alter publication supabase_realtime add table public.documents;</textarea><butto
   }
   function rewriteCharacterNames(text,mapping){
     return text.split('\n').map(line=>{
+      const trimmed=line.trim();
+      if(/^\s*(\/\/|#|=|[-*]|"|https?:\/\/)/.test(trimmed)) return line;
       const m=line.match(/^([^:\n]{1,50}):(.*)$/);
       if(!m) return line;
       const name=m[1].trim();
@@ -1405,6 +1439,9 @@ alter publication supabase_realtime add table public.documents;</textarea><butto
     const mapping=new Map();
     const importedCards=splitIntoCards(stripped).map(c=>({title:c.title,content:rewriteCharacterNames(c.content,mapping)}));
     captureActiveCard();
+    if(cards.length===1 && !(cards[0].content||'').trim()){
+      cards=[];
+    }
     const firstId=cardId();
     importedCards.forEach((c,i)=>{
       cards.push({id:i===0?firstId:cardId(),title:c.title,content:c.content});
@@ -1478,7 +1515,7 @@ alter publication supabase_realtime add table public.documents;</textarea><butto
   function mobileScenesMenu(){
     captureActiveCard();
     const text=currentCard()?.content||'';
-    const scenes=[...text.matchAll(/^#\s*(?:Sc[eé]na\s+)?(.+)$/gmi)].map(match=>match[1].trim());
+    const scenes=[...text.matchAll(/^#\s*(?:Sc[eé]na\s+)?(.+)$/gmi)].map(match=>match[1].trim()).filter(name=>!/^KARTA:/i.test(name));
     openMobileSheet('scény',`<div class="mobile-list">${scenes.length?scenes.map(scene=>`<button type="button" data-scene="${esc(scene)}"><span># ${esc(scene)}</span></button>`).join(''):'<div class="char-empty">V této kartě nejsou žádné scény.</div>'}</div>`);
   }
   function mobileMoreMenu(){
@@ -1543,14 +1580,15 @@ alter publication supabase_realtime add table public.documents;</textarea><butto
     cloudButton.classList.toggle('sync-error',type==='error');
     cloudButton.title=text+(cloudUser?' · Alt+klik pro účet':' · klikni pro přihlášení');
   }
-  function getCloudConfig(){ return {url:SUPABASE_URL,key:SUPABASE_ANON_KEY}; }
   function saveCloudConfig(){ initSupabase(); return true; }
   async function initSupabase(){
-    cloudUrl.value=SUPABASE_URL;
+    const url=cloudUrl.value.trim()||SUPABASE_URL;
+    const key=cloudKey.value.trim()||SUPABASE_ANON_KEY;
+    cloudUrl.value=url;
     if(!window.supabase){supabaseClient=null;setCloudState('knihovna Supabase se nenačetla','error');return false;}
     try{
-      supabaseClient=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
-      cloudKey.value='';
+      supabaseClient=window.supabase.createClient(url,key,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
+      if(key===SUPABASE_ANON_KEY) cloudKey.value='';
       const {data,error}=await supabaseClient.auth.getSession();
       if(error)throw error;
       cloudUser=data.session?.user||null;
