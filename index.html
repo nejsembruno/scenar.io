@@ -613,14 +613,13 @@ body, button, input, textarea { font-size: var(--font-ui) !important; }
 /* Mobile variant (hide scene-navigator sidebar section, icon-only cloud button) is in the consolidated mobile block below. */
 
 
-/* Mobile speaker color patch: overlay enabled; native textarea shown only during IME composition. */
 /* ============================================================
    MOBILE (consolidated) — single source of truth, ≤720px.
    Replaces every earlier fragmented @media(max-width:720px)
    block in this file. Editing on mobile uses a plain, fully
-   visible native <textarea> (no syntax-highlight overlay —
-   that overlay trick fights IME/composition on phone keyboards),
-   sized with real height (never overflow:hidden, so typed text
+   native <textarea> while editing and a syntax-highlight overlay
+   while reading. Only one text layer is visible at a time, preventing
+   doubled glyphs and IME/composition drift. The textarea is sized with real height (never overflow:hidden, so typed text
    can never be clipped out of view), and the bottom nav/tabs
    get out of the way automatically while the keyboard is open.
    ============================================================ */
@@ -669,7 +668,7 @@ body, button, input, textarea { font-size: var(--font-ui) !important; }
     overscroll-behavior-y: contain;
   }
 
-  /* --- plain, fully visible textarea: no highlight overlay, no clipping.
+  /* --- stable hybrid editor: colored overlay when idle, native text while editing.
      overflow-y:auto + max-height is a safety net: JS grows the box to fit
      as you type, but if a resize is ever a frame late, the textarea's own
      native scrolling keeps the caret visible instead of the line being
@@ -682,10 +681,12 @@ body, button, input, textarea { font-size: var(--font-ui) !important; }
     z-index: 1;
     height: 100%;
     overflow: hidden !important;
-    font-family: ui-monospace, "SFMono-Regular", "Cascadia Code", Consolas, "Liberation Mono", monospace;
+    font-family: ui-monospace, "SFMono-Regular", "Cascadia Code", Consolas, "Liberation Mono", monospace !important;
     font-size: 16px !important;
     line-height: 1.55 !important;
-    letter-spacing: normal;
+    letter-spacing: normal !important;
+    font-kerning: none;
+    font-variant-ligatures: none;
     overflow-wrap: break-word;
     word-break: break-word;
     white-space: pre-wrap;
@@ -695,13 +696,12 @@ body, button, input, textarea { font-size: var(--font-ui) !important; }
     z-index: 2;
     display: block;
     width: 100%;
-    max-height: 60vh;
+    max-height: none;
     color: transparent !important;
     -webkit-text-fill-color: transparent !important;
     caret-color: var(--copper-strong) !important;
     background: transparent !important;
-    overflow-y: auto !important;
-    overflow-x: hidden !important;
+    overflow: hidden !important;
     font-family: ui-monospace, "SFMono-Regular", "Cascadia Code", Consolas, "Liberation Mono", monospace;
     font-size: 16px !important;     /* prevents iOS auto-zoom-on-focus */
     line-height: 1.55 !important;
@@ -716,14 +716,18 @@ body, button, input, textarea { font-size: var(--font-ui) !important; }
     -webkit-text-fill-color: transparent !important;
     background: rgba(200,164,107,.32) !important;
   }
+  /* On focus use one native text layer. This avoids doubled glyphs and IME drift. */
+  .editable-wrap:focus-within .text-highlight,
   .editable-wrap.mobile-composing .text-highlight { visibility: hidden !important; }
+  .editable-wrap:focus-within .text-segment,
+  .editable-wrap:focus-within .special-body,
   .editable-wrap.mobile-composing .text-segment,
   .editable-wrap.mobile-composing .special-body {
     color: var(--text) !important;
     -webkit-text-fill-color: var(--text) !important;
   }
-  .editable-wrap.mobile-composing .text-segment::selection,
-  .editable-wrap.mobile-composing .special-body::selection {
+  .editable-wrap:focus-within .text-segment::selection,
+  .editable-wrap:focus-within .special-body::selection {
     color: var(--text) !important;
     -webkit-text-fill-color: var(--text) !important;
   }
@@ -976,7 +980,11 @@ alter publication supabase_realtime add table public.documents;</textarea><butto
     const min=window.matchMedia('(max-width:720px)').matches?40:28;
     el.style.height=Math.max(min,el.scrollHeight)+'px';
     const mirror=el.parentElement?.querySelector('.text-highlight');
-    if(mirror)mirror.style.height=el.style.height;
+    if(mirror){
+      mirror.style.height=el.style.height;
+      mirror.scrollTop=0;
+      mirror.scrollLeft=0;
+    }
   };
   function askDialog(message,options){
     options=options||{};
@@ -1142,7 +1150,7 @@ alter publication supabase_realtime add table public.documents;</textarea><butto
     let composing=false;
     ta.addEventListener('compositionstart',()=>{
       composing=true;
-      if(isMobile()) ta.parentElement?.classList.add('mobile-composing');
+      ta.parentElement?.classList.add('mobile-composing');
     });
     ta.addEventListener('input',()=>{
       if(!composing)expandShortcut(ta);
@@ -1164,6 +1172,11 @@ alter publication supabase_realtime add table public.documents;</textarea><butto
       if(mirror){ mirror.scrollTop=ta.scrollTop; mirror.scrollLeft=ta.scrollLeft; }
     });
     ta.addEventListener('keydown',e=>handleTab(e,ta));
+    ta.addEventListener('blur',()=>{
+      ta.parentElement?.classList.remove('mobile-composing');
+      autoHeight(ta);
+      updateHighlight(ta);
+    });
     if(seg.type!=='text'){
       wrap.querySelector('.collapse').onclick=()=>{ const open=wrap.classList.toggle('collapsed'); collapsed[wrap.dataset.id]=open; wrap.querySelector('.collapse').textContent=open?'▶':'▼'; changed(); };
       if(seg.type!=='condition') wrap.querySelector('.add-row').onclick=()=>addRow(wrap,ta);
