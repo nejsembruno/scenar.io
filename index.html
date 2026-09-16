@@ -826,8 +826,8 @@ body, button, input, textarea { font-size: var(--font-ui) !important; }
     <header class="cloud-modal-head"><strong>supabase</strong><button type="button" id="cloud-close" aria-label="Zavřít">×</button></header>
     <div class="cloud-modal-body">
       <input id="supabase-url" type="hidden" value="https://lagnbrtaexnuxdgiitgs.supabase.co">
-      <label>Publishable / anon key (jen jednou na zařízení)<input id="supabase-key" type="password" placeholder="sb_publishable_... nebo eyJ..." autocomplete="off"></label>
-      <div class="cloud-config-actions"><button type="button" id="cloud-save-config">uložit klíč</button><button type="button" id="cloud-test">otestovat</button></div>
+      <input id="supabase-key" type="hidden">
+      <div class="cloud-config-actions"><button type="button" id="cloud-test">otestovat připojení</button></div>
       <div class="cloud-divider"></div>
       <label>E-mail<input id="cloud-email" type="email" placeholder="name@example.com" autocomplete="email"></label>
       <label>Heslo<input id="cloud-password" type="password" minlength="6" autocomplete="current-password"></label>
@@ -868,6 +868,7 @@ create policy "users delete own docs" on public.documents for delete using (auth
   const CLOUD_CONFIG_KEY='scenar.io:supabase';
   const CLOUD_DOCUMENT_KEY='main';
   const SUPABASE_URL='https://lagnbrtaexnuxdgiitgs.supabase.co';
+  const SUPABASE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxhZ25icnRhZXhudXhkZ2lpdGdzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkzODE5NTEsImV4cCI6MjEwNDk1Nzk1MX0.1g6Ny2kZTQaq_LbM-6Y5NpBGtlYcfnOdjYA6w4wkteM';
   let appReady=false, cloudBootstrapped=false, applyingCloud=false;
   let supabaseClient=null, cloudUser=null, cloudSaveTimer=null;
 
@@ -1420,15 +1421,9 @@ create policy "users delete own docs" on public.documents for delete using (auth
     cloudButton.classList.toggle('connected',Boolean(cloudUser));
   }
   function getCloudConfig(){
-    try{
-      const saved=JSON.parse(localStorage.getItem(CLOUD_CONFIG_KEY)||'null');
-      return saved?.key?{url:SUPABASE_URL,key:saved.key}:null;
-    }catch{return null}
+    return {url:SUPABASE_URL,key:SUPABASE_ANON_KEY};
   }
   function saveCloudConfig(){
-    const key=cloudKey.value.trim();
-    if(!key){setCloudState('doplň publishable / anon key','error');return false;}
-    localStorage.setItem(CLOUD_CONFIG_KEY,JSON.stringify({url:SUPABASE_URL,key}));
     initSupabase();
     return true;
   }
@@ -1442,7 +1437,7 @@ create policy "users delete own docs" on public.documents for delete using (auth
     }
     try{
       supabaseClient=window.supabase.createClient(SUPABASE_URL,config.key,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
-      cloudKey.value=config.key;
+      cloudKey.value='';
       const {data,error}=await supabaseClient.auth.getSession();
       if(error) throw error;
       cloudUser=data.session?.user||null;
@@ -1513,7 +1508,6 @@ create policy "users delete own docs" on public.documents for delete using (auth
   cloudButton.onclick=openCloudModal;
   document.getElementById('cloud-close').onclick=closeCloudModal;
   cloudBackdrop.onclick=closeCloudModal;
-  document.getElementById('cloud-save-config').onclick=saveCloudConfig;
   document.getElementById('cloud-test').onclick=async()=>{
     if(!supabaseClient&&!saveCloudConfig())return;
     const {error}=await supabaseClient.from('documents').select('document_key',{head:true,count:'exact'}).limit(1);
