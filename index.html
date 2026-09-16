@@ -929,7 +929,6 @@ alter publication supabase_realtime add table public.documents;</textarea><butto
   const charList=document.getElementById('char-list');
   const STORAGE_KEY='vn-editor:blocks:v2';
   let characters=[], collapsed={}, saveTimer=null, lastStatus={text:'',state:'saved'}, cards=[], activeCardId=null;
-  const CLOUD_CONFIG_KEY='scenar.io:supabase';
   const CLOUD_DOCUMENT_KEY='main';
   const SUPABASE_URL='https://lagnbrtaexnuxdgiitgs.supabase.co';
   const SUPABASE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxhZ25icnRhZXhudXhkZ2lpdGdzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkzODE5NTEsImV4cCI6MjEwNDk1Nzk1MX0.1g6Ny2kZTQaq_LbM-6Y5NpBGtlYcfnOdjYA6w4wkteM';
@@ -1354,7 +1353,7 @@ alter publication supabase_realtime add table public.documents;</textarea><butto
       const row=document.createElement('div');
       row.className='char-row';
       const color=character.color||'#c8a46b';
-      row.innerHTML=`<span class="char-dot" style="background:${esc(color)}"></span><span class="shortcut">${esc(character.shortcut)}:</span><span class="name" style="color:${esc(color)}">${esc(character.name.toUpperCase())}</span><input class="color-edit" type="color" value="${esc(color)}" title="Změnit barvu postavy" aria-label="Barva postavy ${esc(character.name)}"><button type="button" class="remove" aria-label="Odebrat postavu">×</button>`;
+      row.innerHTML=`<span class="char-dot" style="background:${esc(color)}"></span><span class="shortcut">${esc(character.shortcut)}:</span><span class="name" style="color:${esc(color)}">${esc(character.name.toLocaleUpperCase('cs-CZ'))}</span><input class="color-edit" type="color" value="${esc(color)}" title="Změnit barvu postavy" aria-label="Barva postavy ${esc(character.name)}"><button type="button" class="remove" aria-label="Odebrat postavu">×</button>`;
 
       const picker=row.querySelector('.color-edit');
       const dot=row.querySelector('.char-dot');
@@ -1579,6 +1578,8 @@ alter publication supabase_realtime add table public.documents;</textarea><butto
     cloudButton.classList.toggle('sync-ok',type==='ok');
     cloudButton.classList.toggle('sync-error',type==='error');
     cloudButton.title=text+(cloudUser?' · Alt+klik pro účet':' · klikni pro přihlášení');
+    const syncActions = document.querySelector('.cloud-sync-actions');
+    if(syncActions) syncActions.style.display = cloudUser ? 'flex' : 'none';
   }
   function saveCloudConfig(){ initSupabase(); return true; }
   async function initSupabase(){
