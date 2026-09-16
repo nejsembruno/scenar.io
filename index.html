@@ -728,6 +728,41 @@ body, button, input, textarea { font-size: var(--font-ui) !important; }
  .cloud-config-actions button,.cloud-auth-actions button,.cloud-sync-actions button{min-height:42px;flex:1}
 }
 
+
+/* Mobile keyboard and caret stabilization */
+@media(max-width:720px){
+  html,body{height:100%;min-height:100%;}
+  body{height:var(--app-height,100dvh);min-height:var(--app-height,100dvh);}
+  .main{height:calc(var(--app-height,100dvh) - 44px);}
+  .editor-shell,.block-editor{min-height:0;}
+  .block-editor{overflow-y:auto;overscroll-behavior-y:contain;-webkit-overflow-scrolling:touch;overflow-anchor:none;}
+  .editable-wrap{overflow:visible;}
+  .text-highlight,.text-segment,.special-body{
+    font-family:ui-monospace,"SFMono-Regular","Cascadia Code",Consolas,"Liberation Mono",monospace!important;
+    font-size:16px!important;line-height:1.55!important;letter-spacing:normal!important;
+    font-kerning:none;font-variant-ligatures:none;tab-size:2;
+    overflow-wrap:break-word;word-break:break-word;white-space:pre-wrap;
+  }
+  .text-highlight{inset:0;height:100%;overflow:hidden!important;}
+  .text-segment,.special-body{overflow:hidden!important;caret-color:var(--text)!important;}
+  textarea:focus{scroll-margin-top:12px;scroll-margin-bottom:calc(var(--keyboard-height,0px) + 20px);}
+}
+
+
+/* Scene navigator and background cloud status */
+.scene-navigator{margin-top:18px;padding-top:13px;border-top:1px solid var(--line)}
+.scene-list{display:grid;gap:3px;max-height:32vh;overflow:auto}
+.scene-link{display:flex;align-items:center;width:100%;min-width:0;min-height:30px;padding:4px 6px;text-align:left;border-color:transparent;color:var(--text-dim)}
+.scene-link::before{content:"#";flex:0 0 auto;margin-right:7px;color:var(--copper)}
+.scene-link span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.scene-link:hover,.scene-link.active{color:var(--text);background:var(--panel);border-color:var(--line-soft)}
+#cloud-btn{display:inline-flex;align-items:center;gap:6px;min-height:28px;padding:4px 8px;color:var(--text-faint);border:1px solid transparent;border-radius:3px;cursor:default;white-space:nowrap}
+#cloud-btn::before{content:"☁";color:var(--text-faint)}
+#cloud-btn.connected,#cloud-btn.sync-ok{color:var(--text-dim)}
+#cloud-btn.connected::before,#cloud-btn.sync-ok::before{color:var(--copper)}
+#cloud-btn.sync-error::before{color:var(--danger)}
+@media(max-width:720px){.scene-navigator{display:none!important}#cloud-btn{padding:3px;font-size:0!important}#cloud-btn::before{font-size:13px}}
+
 </style>
 </head>
 <body>
@@ -737,7 +772,7 @@ body, button, input, textarea { font-size: var(--font-ui) !important; }
     <div class="win-dots"><span></span><span></span><span></span></div>
     <div class="path"><span class="prompt">~/</span><b>scenar</b><span class="ext">.io</span></div>
     <div class="status" id="status" role="status" aria-live="polite"><span class="status-dot"></span><span id="status-text">načítám…</span></div>
-    <button type="button" id="cloud-btn" title="Cloud synchronizace">cloud</button>
+    <div id="cloud-btn" role="status" aria-live="polite" title="Stav cloudové synchronizace">připojuji</div>
     <button type="button" id="import-btn" title="Importovat scénář">import</button>
     <input type="file" id="import-file" accept=".txt,text/plain" style="display:none">
     <button type="button" id="copy-btn">kopírovat</button>
@@ -758,6 +793,11 @@ body, button, input, textarea { font-size: var(--font-ui) !important; }
         </div>
         <button type="button" id="add-char-btn">+ přidat postavu</button>
       </div>
+
+      <section class="scene-navigator" aria-labelledby="scene-nav-title">
+        <h2 id="scene-nav-title">Scény</h2>
+        <div id="scene-list" class="scene-list" aria-live="polite"></div>
+      </section>
 
       <div class="insert-menu">
         <div class="menu-label">Obsah</div>
@@ -825,16 +865,16 @@ body, button, input, textarea { font-size: var(--font-ui) !important; }
   <section class="cloud-modal" id="cloud-modal" aria-hidden="true" aria-label="Nastavení Supabase">
     <header class="cloud-modal-head"><strong>supabase</strong><button type="button" id="cloud-close" aria-label="Zavřít">×</button></header>
     <div class="cloud-modal-body">
-      <input id="supabase-url" type="hidden" value="https://lagnbrtaexnuxdgiitgs.supabase.co">
-      <input id="supabase-key" type="hidden">
+      <label>Project URL<input id="supabase-url" type="url" placeholder="https://example.supabase.co" autocomplete="url"></label>
+      <label>Anon public key<input id="supabase-key" type="password" placeholder="eyJ..." autocomplete="off"></label>
       <div class="cloud-config-actions"><button type="button" id="cloud-test">otestovat připojení</button></div>
       <div class="cloud-divider"></div>
       <label>E-mail<input id="cloud-email" type="email" placeholder="name@example.com" autocomplete="email"></label>
       <label>Heslo<input id="cloud-password" type="password" minlength="6" autocomplete="current-password"></label>
       <div class="cloud-auth-actions"><button type="button" id="cloud-sign-in">přihlásit</button><button type="button" id="cloud-sign-up">vytvořit účet</button><button type="button" id="cloud-sign-out">odhlásit</button></div>
       <p class="cloud-state" id="cloud-state">cloud není nastaven</p>
-      <div class="cloud-sync-actions"><button type="button" id="cloud-upload">uložit do cloudu</button><button type="button" id="cloud-download">načíst z cloudu</button></div>
-      <details><summary>SQL pro Supabase</summary><textarea id="supabase-sql" readonly>create table public.documents (
+      <div class="cloud-sync-actions" style="display:none"><button type="button" id="cloud-upload">uložit do cloudu</button><button type="button" id="cloud-download">načíst z cloudu</button></div>
+      <details style="display:none"><summary>SQL pro Supabase</summary><textarea id="supabase-sql" readonly>create table public.documents (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,
   document_key text not null default 'main',
@@ -845,11 +885,13 @@ body, button, input, textarea { font-size: var(--font-ui) !important; }
 );
 
 alter table public.documents enable row level security;
-
 create policy "users read own docs" on public.documents for select using (auth.uid() = user_id);
 create policy "users insert own docs" on public.documents for insert with check (auth.uid() = user_id);
 create policy "users update own docs" on public.documents for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
-create policy "users delete own docs" on public.documents for delete using (auth.uid() = user_id);</textarea><button type="button" id="copy-sql">kopírovat SQL</button></details>
+create policy "users delete own docs" on public.documents for delete using (auth.uid() = user_id);
+
+-- Realtime, spusť jednou:
+alter publication supabase_realtime add table public.documents;</textarea><button type="button" id="copy-sql">kopírovat SQL</button></details>
     </div>
   </section>
   <div class="footer" id="footer">0 řádků · 0 znaků</div>
@@ -870,14 +912,29 @@ create policy "users delete own docs" on public.documents for delete using (auth
   const SUPABASE_URL='https://lagnbrtaexnuxdgiitgs.supabase.co';
   const SUPABASE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxhZ25icnRhZXhudXhkZ2lpdGdzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkzODE5NTEsImV4cCI6MjEwNDk1Nzk1MX0.1g6Ny2kZTQaq_LbM-6Y5NpBGtlYcfnOdjYA6w4wkteM';
   let appReady=false, cloudBootstrapped=false, applyingCloud=false;
-  let supabaseClient=null, cloudUser=null, cloudSaveTimer=null;
+  let supabaseClient=null, cloudUser=null, cloudSaveTimer=null, realtimeChannel=null, lastCloudUpdatedAt=0;
+  const REALTIME_CLIENT_ID=sessionStorage.getItem('scenar.io:realtime-client')||crypto.randomUUID();
+  sessionStorage.setItem('scenar.io:realtime-client',REALTIME_CLIENT_ID);
 
   const storage={
     async get(k){ if(window.storage?.get) return window.storage.get(k,false); return {value:localStorage.getItem(k)}; },
     async set(k,v){ if(window.storage?.set) return window.storage.set(k,v,false); localStorage.setItem(k,v); }
   };
   const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-  const autoHeight=el=>{ el.style.height='auto'; el.style.height=Math.max(28,el.scrollHeight)+'px'; };
+  const autoHeight=el=>{
+    const selStart=el.selectionStart, selEnd=el.selectionEnd;
+    const editorScroll=editor.scrollTop;
+    const topBefore=el.getBoundingClientRect().top;
+    el.style.height='0px';
+    el.style.height=Math.max(28,el.scrollHeight)+'px';
+    const mirror=el.parentElement?.querySelector('.text-highlight');
+    if(mirror)mirror.style.height=el.style.height;
+    if(document.activeElement===el){
+      try{el.setSelectionRange(selStart,selEnd);}catch{}
+      const topAfter=el.getBoundingClientRect().top;
+      editor.scrollTop=editorScroll+(topAfter-topBefore);
+    }
+  };
 
   function askDialog(message,options){
     options=options||{};
@@ -943,7 +1000,7 @@ create policy "users delete own docs" on public.documents for delete using (auth
     const mirror=ta.parentElement?.querySelector('.text-highlight');
     if(!mirror)return;
     mirror.innerHTML=ta.value.split('\n').map(renderLine).join('\n');
-    mirror.scrollTop=ta.scrollTop; mirror.scrollLeft=ta.scrollLeft;
+    mirror.style.height=ta.style.height||Math.max(28,ta.scrollHeight)+'px'; mirror.scrollTop=ta.scrollTop; mirror.scrollLeft=ta.scrollLeft;
   }
   function refreshHighlights(){ editor.querySelectorAll('textarea').forEach(updateHighlight); }
 
@@ -1173,11 +1230,33 @@ create policy "users delete own docs" on public.documents for delete using (auth
     for(const field of editor.querySelectorAll('textarea')){
       let match=null;
       for(const pattern of patterns){match=field.value.match(pattern);if(match)break;}
-      if(match){field.focus();field.setSelectionRange(match.index,match.index+match[0].length);field.scrollIntoView({behavior:'smooth',block:'center'});return;}
+      if(match){field.focus();field.setSelectionRange(match.index,match.index+match[0].length);field.scrollIntoView({behavior:isMobile()?'auto':'smooth',block:'center'});return;}
     }
     flash('scéna "'+clean+'" nenalezena');
   }
 
+  function sceneNames(){
+    captureActiveCard();
+    const text=currentCard()?.content||'';
+    const seen=new Set();
+    return [...text.matchAll(/^#\s*(?:Sc[eé]na\s+)?(.+)$/gmi)]
+      .map(match=>match[1].trim())
+      .filter(name=>name&&!seen.has(name.toLocaleLowerCase('cs-CZ'))&&seen.add(name.toLocaleLowerCase('cs-CZ')));
+  }
+  function renderSceneNavigator(){
+    const host=document.getElementById('scene-list');
+    if(!host)return;
+    const scenes=sceneNames();
+    host.innerHTML='';
+    if(!scenes.length){host.innerHTML='<div class="char-empty">V této kartě nejsou scény.</div>';return;}
+    scenes.forEach(scene=>{
+      const button=document.createElement('button');
+      button.type='button';button.className='scene-link';button.title='Přejít na scénu '+scene;
+      button.innerHTML='<span>'+esc(scene)+'</span>';
+      button.onclick=()=>jumpToScene(scene);
+      host.appendChild(button);
+    });
+  }
   function expandShortcut(ta){
     const end=ta.selectionStart;
     const start=ta.value.lastIndexOf('\n',end-1)+1;
@@ -1195,7 +1274,7 @@ create policy "users delete own docs" on public.documents for delete using (auth
   }
   function handleTab(e,ta){ if(e.key!=='Tab')return;e.preventDefault();const p=ta.selectionStart;ta.value=ta.value.slice(0,p)+'  '+ta.value.slice(ta.selectionEnd);ta.setSelectionRange(p+2,p+2);autoHeight(ta);changed(); }
   function ensureTextSegment(){ if(!editor.children.length) editor.appendChild(createSegment({type:'text',content:''},0)); }
-  function changed(){ updateFooter();setStatus('ukládání…','saving');clearTimeout(saveTimer);saveTimer=setTimeout(save,500); }
+  function changed(){ updateFooter();renderSceneNavigator();setStatus('ukládání…','saving');clearTimeout(saveTimer);saveTimer=setTimeout(save,500); }
   function updateFooter(){ const v=serialize(); footer.textContent=(v? v.split('\n').length:0)+' řádků · '+v.length+' znaků · '+editor.querySelectorAll('.special-block').length+' bloků'; }
   async function save(){
     try{
@@ -1327,6 +1406,30 @@ create policy "users delete own docs" on public.documents for delete using (auth
   const mobileSheetTitle=document.getElementById('mobile-sheet-title');
   const mobileSheetContent=document.getElementById('mobile-sheet-content');
   const isMobile=()=>window.matchMedia('(max-width:720px)').matches;
+  let viewportRaf=0;
+  function updateMobileViewport(){
+    if(!isMobile())return;
+    cancelAnimationFrame(viewportRaf);
+    viewportRaf=requestAnimationFrame(()=>{
+      const vv=window.visualViewport;
+      const height=vv?vv.height:window.innerHeight;
+      const keyboard=Math.max(0,window.innerHeight-height-(vv?.offsetTop||0));
+      document.documentElement.style.setProperty('--app-height',height+'px');
+      document.documentElement.style.setProperty('--keyboard-height',keyboard+'px');
+      const field=document.activeElement;
+      if(field?.matches?.('#editor textarea')){
+        const r=field.getBoundingClientRect();
+        const visibleBottom=height-12;
+        if(r.bottom>visibleBottom)editor.scrollTop+=r.bottom-visibleBottom;
+        else if(r.top<8)editor.scrollTop-=8-r.top;
+      }
+    });
+  }
+  window.visualViewport?.addEventListener('resize',updateMobileViewport);
+  window.visualViewport?.addEventListener('scroll',updateMobileViewport);
+  window.addEventListener('orientationchange',updateMobileViewport);
+  document.addEventListener('focusin',event=>{if(event.target.matches?.('#editor textarea'))setTimeout(updateMobileViewport,60);});
+  updateMobileViewport();
 
   function closeMobileSheet(){
     mobileSheet.classList.remove('open');
@@ -1418,48 +1521,42 @@ create policy "users delete own docs" on public.documents for delete using (auth
   function setCloudState(text,type=''){
     cloudState.textContent=text;
     cloudState.className='cloud-state'+(type?' '+type:'');
+    cloudButton.textContent=text;
     cloudButton.classList.toggle('connected',Boolean(cloudUser));
+    cloudButton.classList.toggle('sync-ok',type==='ok');
+    cloudButton.classList.toggle('sync-error',type==='error');
+    cloudButton.title=text+(cloudUser?' · Alt+klik pro účet':' · klikni pro přihlášení');
   }
-  function getCloudConfig(){
-    return {url:SUPABASE_URL,key:SUPABASE_ANON_KEY};
-  }
-  function saveCloudConfig(){
-    initSupabase();
-    return true;
-  }
+  function getCloudConfig(){ return {url:SUPABASE_URL,key:SUPABASE_ANON_KEY}; }
+  function saveCloudConfig(){ initSupabase(); return true; }
   async function initSupabase(){
-    const config=getCloudConfig();
     cloudUrl.value=SUPABASE_URL;
-    if(!config?.key||!window.supabase){
-      supabaseClient=null;
-      setCloudState(config?.key?'knihovna Supabase se nenačetla':'jednorázově vlož publishable / anon key',config?.key?'error':'');
-      return false;
-    }
+    if(!window.supabase){supabaseClient=null;setCloudState('knihovna Supabase se nenačetla','error');return false;}
     try{
-      supabaseClient=window.supabase.createClient(SUPABASE_URL,config.key,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
+      supabaseClient=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
       cloudKey.value='';
       const {data,error}=await supabaseClient.auth.getSession();
-      if(error) throw error;
+      if(error)throw error;
       cloudUser=data.session?.user||null;
       setCloudState(cloudUser?'přihlášen: '+cloudUser.email+' · automatická synchronizace':'připojeno · přihlas se jen jednou',cloudUser?'ok':'');
       supabaseClient.auth.onAuthStateChange((event,session)=>{
-        cloudUser=session?.user||null;
-        cloudBootstrapped=false;
+        cloudUser=session?.user||null; cloudBootstrapped=false; if(!cloudUser)stopRealtime();
         setCloudState(cloudUser?'přihlášen: '+cloudUser.email+' · automatická synchronizace':'připojeno · přihlas se jen jednou',cloudUser?'ok':'');
-        if(cloudUser&&appReady&&(event==='SIGNED_IN'||event==='INITIAL_SESSION'||event==='TOKEN_REFRESHED')) setTimeout(syncCloudOnStart,0);
+        if(cloudUser&&appReady&&(event==='SIGNED_IN'||event==='INITIAL_SESSION'||event==='TOKEN_REFRESHED'))setTimeout(syncCloudOnStart,0);
       });
-      if(cloudUser&&appReady) await syncCloudOnStart();
+      if(cloudUser&&appReady)await syncCloudOnStart();
       return true;
     }catch(error){supabaseClient=null;setCloudState('chyba připojení: '+error.message,'error');return false;}
   }
   function cloudDocumentKey(){ return CLOUD_DOCUMENT_KEY; }
-  function cloudPayload(){captureActiveCard();return {cards,activeCardId,characters,collapsed,version:2};}
+  function cloudPayload(){captureActiveCard();return {cards,activeCardId,characters,collapsed,version:3,realtimeClientId:REALTIME_CLIENT_ID,savedAt:new Date().toISOString()};}
   async function uploadCloud(showMessage=true){
     if(!supabaseClient||!cloudUser){if(showMessage)setCloudState('nejdřív se přihlas','error');return false;}
     const row={user_id:cloudUser.id,document_key:cloudDocumentKey(),title:'scenar.io',payload:cloudPayload(),updated_at:new Date().toISOString()};
-    const {error}=await supabaseClient.from('documents').upsert(row,{onConflict:'user_id,document_key'});
+    const {data,error}=await supabaseClient.from('documents').upsert(row,{onConflict:'user_id,document_key'}).select('updated_at').single();
     if(error){setCloudState('cloud save selhal: '+error.message,'error');return false;}
-    setCloudState((showMessage?'cloud uložen: ':'synchronizováno: ')+new Date().toLocaleTimeString('cs-CZ',{hour:'2-digit',minute:'2-digit'}),'ok');
+    lastCloudUpdatedAt=Math.max(lastCloudUpdatedAt,Date.parse(data?.updated_at||row.updated_at)||0);
+    if(showMessage)setCloudState('cloud uložen: '+new Date().toLocaleTimeString('cs-CZ',{hour:'2-digit',minute:'2-digit'}),'ok');
     return true;
   }
   function queueCloudSave(){
@@ -1469,29 +1566,48 @@ create policy "users delete own docs" on public.documents for delete using (auth
   }
   async function applyCloudPayload(data){
     const payload=data?.payload||{};
+    const remoteTime=Date.parse(data?.updated_at||payload.savedAt||0)||0;
+    if(remoteTime&&remoteTime<lastCloudUpdatedAt)return false;
+    lastCloudUpdatedAt=Math.max(lastCloudUpdatedAt,remoteTime);
     applyingCloud=true;
     cards=Array.isArray(payload.cards)&&payload.cards.length?payload.cards:cards;
     activeCardId=payload.activeCardId&&cards.some(card=>card.id===payload.activeCardId)?payload.activeCardId:cards[0]?.id;
     characters=Array.isArray(payload.characters)?payload.characters:characters;
     collapsed=payload.collapsed||{};
-    renderCharacters();renderTabs();render(currentCard()?.content||'');
-    captureActiveCard();
+    renderCharacters();renderTabs();render(currentCard()?.content||'');captureActiveCard();renderSceneNavigator();
     await storage.set(STORAGE_KEY,JSON.stringify({cards,activeCardId,characters,collapsed,updatedAt:data.updated_at||new Date().toISOString()}));
     applyingCloud=false;
+    return true;
+  }
+  function stopRealtime(){
+    if(realtimeChannel&&supabaseClient)supabaseClient.removeChannel(realtimeChannel);
+    realtimeChannel=null;
+  }
+  function startRealtime(){
+    stopRealtime();
+    if(!supabaseClient||!cloudUser)return;
+    realtimeChannel=supabaseClient
+      .channel('scenar-main-'+cloudUser.id)
+      .on('postgres_changes',{event:'*',schema:'public',table:'documents',filter:'user_id=eq.'+cloudUser.id},async change=>{
+        const row=change.new;
+        if(!row||row.document_key!==cloudDocumentKey())return;
+        if(row.payload?.realtimeClientId===REALTIME_CLIENT_ID)return;
+        const applied=await applyCloudPayload(row);
+        if(applied)setCloudState('realtime '+new Date(row.updated_at).toLocaleTimeString('cs-CZ',{hour:'2-digit',minute:'2-digit',second:'2-digit'}),'ok');
+      })
+      .subscribe(status=>{
+        if(status==='SUBSCRIBED')setCloudState('synchronizováno','ok');
+        if(status==='CHANNEL_ERROR'||status==='TIMED_OUT')setCloudState('realtime chyba','error');
+      });
   }
   async function syncCloudOnStart(){
     if(cloudBootstrapped||!supabaseClient||!cloudUser||!appReady)return;
-    cloudBootstrapped=true;
-    setCloudState('synchronizuji…');
+    cloudBootstrapped=true; setCloudState('synchronizuji…');
     const {data,error}=await supabaseClient.from('documents').select('payload,updated_at').eq('user_id',cloudUser.id).eq('document_key',cloudDocumentKey()).maybeSingle();
     if(error){cloudBootstrapped=false;setCloudState('automatická synchronizace selhala: '+error.message,'error');return;}
-    if(data){
-      await applyCloudPayload(data);
-      setCloudState('synchronizováno: '+new Date(data.updated_at).toLocaleString('cs-CZ'),'ok');
-    }else{
-      const ok=await uploadCloud(false);
-      setCloudState(ok?'první cloudová kopie vytvořena':'první synchronizace selhala',ok?'ok':'error');
-    }
+    if(data){await applyCloudPayload(data);setCloudState('synchronizováno','ok');}
+    else await uploadCloud(false);
+    startRealtime();
   }
   async function downloadCloud(){
     if(!supabaseClient||!cloudUser){setCloudState('nejdřív se přihlas','error');return;}
@@ -1505,7 +1621,7 @@ create policy "users delete own docs" on public.documents for delete using (auth
   function openCloudModal(){cloudModal.classList.add('open');cloudBackdrop.classList.add('open');cloudModal.setAttribute('aria-hidden','false');}
   function closeCloudModal(){cloudModal.classList.remove('open');cloudBackdrop.classList.remove('open');cloudModal.setAttribute('aria-hidden','true');}
 
-  cloudButton.onclick=openCloudModal;
+  cloudButton.onclick=event=>{if(!cloudUser||event.altKey)openCloudModal();};
   document.getElementById('cloud-close').onclick=closeCloudModal;
   cloudBackdrop.onclick=closeCloudModal;
   document.getElementById('cloud-test').onclick=async()=>{
@@ -1545,11 +1661,10 @@ create policy "users delete own docs" on public.documents for delete using (auth
       }
     }catch(e){}
     if(!cards.length){cards=[{id:cardId(),title:'Scénář',content:legacyContent}];activeCardId=cards[0].id;}
-    renderCharacters();renderTabs();render(currentCard().content||'');setStatus(currentCard().content?'načteno':'nový soubor');
-    appReady=true;
-    await initSupabase();
+    renderCharacters();renderTabs();render(currentCard().content||'');renderSceneNavigator();setStatus(currentCard().content?'načteno':'nový soubor');
+    appReady=true; await initSupabase();
   }
-  window.addEventListener('pagehide',()=>{clearTimeout(saveTimer);save()});init();
+  window.addEventListener('pagehide',()=>{clearTimeout(saveTimer);stopRealtime();save()});init();
 })();
 </script>
 
