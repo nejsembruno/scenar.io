@@ -21,6 +21,7 @@
   --choice: #b38ca5;
   --dice: #c3ad86;
   --surface: #9b8d78;
+  --condition: #8fae8a;
   --danger: #c87d69;
   --accent-scene: var(--copper-strong);
   --accent-name: var(--copper);
@@ -127,7 +128,7 @@ button.primary:hover { color: var(--text); border-color: var(--copper); backgrou
 .char-dot { width: 8px; height: 8px; flex: 0 0 8px; border-radius: 50%; box-shadow: none !important; }
 .char-row .shortcut { min-width: 18px; color: var(--text-faint); font-size: 10px; }
 .char-row .name { flex: 1; overflow: hidden; color: var(--copper); font-size: 12px; font-weight: 800; text-overflow: ellipsis; white-space: nowrap; text-shadow: none !important; }
-.char-row .remove { min-height: 24px; padding: 1px 6px; border: 0; color: var(--text-faint); }
+.char-row .remove { flex-shrink: 0; min-width: 26px; min-height: 24px; padding: 1px 6px; border: 0; color: var(--text-faint); }
 .char-row .remove:hover { color: var(--danger); background: transparent; }
 .char-empty { padding: 7px 0; color: var(--text-faint); font-size: 12px; }
 .add-char { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; }
@@ -147,6 +148,7 @@ button.primary:hover { color: var(--text); border-color: var(--copper); backgrou
   appearance: auto;
   -webkit-appearance: auto;
   display: block;
+  flex-shrink: 0;
   width: 30px !important;
   min-width: 30px !important;
   height: 30px !important;
@@ -247,6 +249,8 @@ button.primary:hover { color: var(--text); border-color: var(--copper); backgrou
 .text-highlight .speaker { color: var(--copper); font-weight: 900; letter-spacing: .02em; filter: none !important; text-shadow: none !important; }
 .text-highlight .dialogue-text { color: var(--text); }
 .text-highlight .option-key, .text-highlight .branch-marker { color: var(--choice); font-weight: 900; }
+.text-highlight .else-marker { color: var(--condition); font-weight: 900; }
+.text-highlight .condition-label { color: var(--condition); font-weight: 800; font-style: italic; }
 .text-highlight .option-text { color: var(--text); }
 .text-highlight .dice-range { color: var(--dice); font-weight: 850; }
 .text-highlight .surface-command, .text-highlight .surface-arrow { color: var(--text-faint); }
@@ -266,6 +270,7 @@ button.primary:hover { color: var(--text); border-color: var(--copper); backgrou
 .special-block.choice { --block-accent: var(--choice); --block-color: var(--choice); }
 .special-block.dice { --block-accent: var(--dice); --block-color: var(--dice); }
 .special-block.surface { --block-accent: var(--surface); --block-color: var(--surface); }
+.special-block.condition { --block-accent: var(--condition); --block-color: var(--condition); }
 .block-head {
   display: flex;
   align-items: center;
@@ -440,6 +445,7 @@ body, button, input, textarea { font-size: var(--font-ui) !important; }
 .special-block.choice { --block-accent: var(--choice); }
 .special-block.dice { --block-accent: var(--dice); }
 .special-block.surface { --block-accent: var(--surface); }
+.special-block.condition { --block-accent: var(--condition); }
 .block-head {
   min-height: 32px !important;
   padding: 3px 6px 4px 8px !important;
@@ -552,7 +558,7 @@ body, button, input, textarea { font-size: var(--font-ui) !important; }
   .topbar .path{min-width:0;overflow:hidden;text-overflow:ellipsis;font-size:12px!important}
   .topbar .status{order:initial!important;flex:0 0 auto!important;margin-left:auto!important;font-size:0!important}
   .topbar .status-dot{width:7px;height:7px}
-  #copy-btn,#export-btn{display:none!important}
+  #copy-btn,#export-btn,#import-btn{display:none!important}
   #sidebar-toggle{display:none!important}
 
   .main{min-height:0;padding-bottom:var(--mobile-nav-h)}
@@ -732,6 +738,8 @@ body, button, input, textarea { font-size: var(--font-ui) !important; }
     <div class="path"><span class="prompt">~/</span><b>scenar</b><span class="ext">.io</span></div>
     <div class="status" id="status" role="status" aria-live="polite"><span class="status-dot"></span><span id="status-text">načítám…</span></div>
     <button type="button" id="cloud-btn" title="Cloud synchronizace">cloud</button>
+    <button type="button" id="import-btn" title="Importovat scénář">import</button>
+    <input type="file" id="import-file" accept=".txt,text/plain" style="display:none">
     <button type="button" id="copy-btn">kopírovat</button>
     <button type="button" id="export-btn" class="primary">stáhnout .txt</button>
   </div>
@@ -762,6 +770,7 @@ body, button, input, textarea { font-size: var(--font-ui) !important; }
           <button type="button" id="insert-choice"><span>＋</span> Volba</button>
           <button type="button" id="insert-dice"><span>＋</span> Hod kostkou</button>
           <button type="button" id="insert-surface"><span>＋</span> Plocha</button>
+          <button type="button" id="insert-condition"><span>＋</span> Jestli / jinak</button>
         </div>
       </div>
 
@@ -769,6 +778,7 @@ body, button, input, textarea { font-size: var(--font-ui) !important; }
         <b>Rychlá nápověda</b><br>
         <code>#</code> scéna · <code>//</code> akce<br>
         <code>b:</code> vloží postavu<br>
+        <code>"podmínka"</code> na začátku popisuje jestli, <code>JINAK</code> dělí větve.<br>
         Bloky přidáš tlačítky výše.
       </div>
     </aside>
@@ -799,6 +809,18 @@ body, button, input, textarea { font-size: var(--font-ui) !important; }
     <button type="button" data-mobile-action="more"><span>více</span></button>
   </nav>
 
+  <div class="cloud-modal-backdrop" id="dialog-backdrop"></div>
+  <section class="cloud-modal" id="dialog-modal" aria-hidden="true" aria-label="Potvrzení">
+    <div class="cloud-modal-body">
+      <p id="dialog-message" style="margin:0;color:var(--text)"></p>
+      <input type="text" id="dialog-input" style="display:none">
+      <div class="cloud-config-actions">
+        <button type="button" id="dialog-cancel">zrušit</button>
+        <button type="button" id="dialog-ok" class="primary">potvrdit</button>
+      </div>
+    </div>
+  </section>
+
   <div class="cloud-modal-backdrop" id="cloud-modal-backdrop"></div>
   <section class="cloud-modal" id="cloud-modal" aria-hidden="true" aria-label="Nastavení Supabase">
     <header class="cloud-modal-head"><strong>supabase</strong><button type="button" id="cloud-close" aria-label="Zavřít">×</button></header>
@@ -813,29 +835,31 @@ body, button, input, textarea { font-size: var(--font-ui) !important; }
       <p class="cloud-state" id="cloud-state">cloud není nastaven</p>
       <div class="cloud-sync-actions"><button type="button" id="cloud-upload">uložit do cloudu</button><button type="button" id="cloud-download">načíst z cloudu</button></div>
       <details><summary>SQL pro Supabase</summary><textarea id="supabase-sql" readonly>create table public.documents (
-  id uuid primary key,
+  id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,
+  document_key text not null default 'main',
   title text not null default 'scenar.io',
   payload jsonb not null default '{}'::jsonb,
-  updated_at timestamptz not null default now()
+  updated_at timestamptz not null default now(),
+  unique (user_id, document_key)
 );
 
 alter table public.documents enable row level security;
 
-create policy "users read own documents"
+create policy "users read own docs"
 on public.documents for select
 using (auth.uid() = user_id);
 
-create policy "users insert own documents"
+create policy "users insert own docs"
 on public.documents for insert
 with check (auth.uid() = user_id);
 
-create policy "users update own documents"
+create policy "users update own docs"
 on public.documents for update
 using (auth.uid() = user_id)
 with check (auth.uid() = user_id);
 
-create policy "users delete own documents"
+create policy "users delete own docs"
 on public.documents for delete
 using (auth.uid() = user_id);</textarea><button type="button" id="copy-sql">kopírovat SQL</button></details>
     </div>
@@ -854,7 +878,7 @@ using (auth.uid() = user_id);</textarea><button type="button" id="copy-sql">kop�
   const STORAGE_KEY='vn-editor:blocks:v2';
   let characters=[], collapsed={}, saveTimer=null, lastStatus={text:'',state:'saved'}, cards=[], activeCardId=null;
   const CLOUD_CONFIG_KEY='scenar.io:supabase';
-  const CLOUD_DOCUMENT_KEY='scenar.io:document-id';
+  const CLOUD_DOCUMENT_KEY='main';
   let supabaseClient=null, cloudUser=null, cloudSaveTimer=null;
 
   const storage={
@@ -863,6 +887,37 @@ using (auth.uid() = user_id);</textarea><button type="button" id="copy-sql">kop�
   };
   const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   const autoHeight=el=>{ el.style.height='auto'; el.style.height=Math.max(28,el.scrollHeight)+'px'; };
+
+  function askDialog(message,options){
+    options=options||{};
+    const backdrop=document.getElementById('dialog-backdrop');
+    const modal=document.getElementById('dialog-modal');
+    const msgEl=document.getElementById('dialog-message');
+    const inputEl=document.getElementById('dialog-input');
+    const okBtn=document.getElementById('dialog-ok');
+    const cancelBtn=document.getElementById('dialog-cancel');
+    const isPrompt='defaultValue' in options;
+    return new Promise(resolve=>{
+      msgEl.textContent=message;
+      inputEl.style.display=isPrompt?'block':'none';
+      if(isPrompt) inputEl.value=options.defaultValue||'';
+      backdrop.classList.add('open'); modal.classList.add('open'); modal.setAttribute('aria-hidden','false');
+      if(isPrompt) requestAnimationFrame(()=>{inputEl.focus();inputEl.select();});
+      function cleanup(result){
+        backdrop.classList.remove('open'); modal.classList.remove('open'); modal.setAttribute('aria-hidden','true');
+        okBtn.removeEventListener('click',onOk); cancelBtn.removeEventListener('click',onCancel);
+        backdrop.removeEventListener('click',onCancel); inputEl.removeEventListener('keydown',onKey);
+        resolve(result);
+      }
+      function onOk(){ cleanup(isPrompt?inputEl.value:true); }
+      function onCancel(){ cleanup(isPrompt?null:false); }
+      function onKey(e){ if(e.key==='Enter'){e.preventDefault();onOk();} if(e.key==='Escape')onCancel(); }
+      okBtn.addEventListener('click',onOk);
+      cancelBtn.addEventListener('click',onCancel);
+      backdrop.addEventListener('click',onCancel);
+      inputEl.addEventListener('keydown',onKey);
+    });
+  }
   function setStatus(text,state='saved'){ lastStatus={text,state}; statusText.textContent=text; statusEl.className='status '+state; }
   function flash(text){ statusText.textContent=text; statusEl.className='status error'; setTimeout(()=>setStatus(lastStatus.text,lastStatus.state),1500); }
 
@@ -884,6 +939,9 @@ using (auth.uid() = user_id);</textarea><button type="button" id="copy-sql">kop�
     if(option) return '<span class="option-key">'+esc(option[1])+'</span><span class="option-text"> '+esc(option[2])+'</span>';
     const branch=line.match(/^=\s*([A-Z])\s*$/);
     if(branch) return '<span class="branch-marker">= '+esc(branch[1])+'</span>';
+    if(/^JINAK\s*$/i.test(line.trim())) return '<span class="else-marker">'+safe+'</span>';
+    const conditionLabel=line.trim().match(/^"(.+)"$/);
+    if(conditionLabel) return '<span class="condition-label">'+safe+'</span>';
     const range=line.match(/^(\d+)\s*-\s*(\d+)\s*$/);
     if(range) return '<span class="dice-range">'+safe+'</span>';
     const surface=line.match(/^([-*]\s*(?:click|klik)\s+)(.+?)(\s*(?:=>|->|—>|→)\s*)(.+)$/i);
@@ -923,15 +981,19 @@ using (auth.uid() = user_id);</textarea><button type="button" id="copy-sql">kop�
     requestAnimationFrame(()=>renameCard(card));
   }
   function renameCard(card){
-    const name=prompt('Název karty:',card.title);
-    if(name!==null && name.trim()){card.title=name.trim();renderTabs();changed();}
+    askDialog('Název karty:',{defaultValue:card.title}).then(name=>{
+      if(name!==null && name.trim()){card.title=name.trim();renderTabs();changed();}
+    });
   }
   function removeCard(id){
     if(cards.length===1){flash('Dokument musí mít alespoň jednu kartu');return;}
-    const card=cards.find(c=>c.id===id); if(!confirm('Odstranit kartu „'+card.title+'“?'))return;
-    const index=cards.findIndex(c=>c.id===id); cards.splice(index,1);
-    if(activeCardId===id){activeCardId=cards[Math.max(0,index-1)].id;render(currentCard().content||'');}
-    renderTabs();changed();
+    const card=cards.find(c=>c.id===id);
+    askDialog('Odstranit kartu „'+card.title+'“?').then(ok=>{
+      if(!ok)return;
+      const index=cards.findIndex(c=>c.id===id); cards.splice(index,1);
+      if(activeCardId===id){activeCardId=cards[Math.max(0,index-1)].id;render(currentCard().content||'');}
+      renderTabs();changed();
+    });
   }
   document.getElementById('add-tab').onclick=()=>addCard();
 
@@ -940,12 +1002,12 @@ using (auth.uid() = user_id);</textarea><button type="button" id="copy-sql">kop�
     const out=[]; let normal=[];
     const flush=()=>{ if(normal.length){ out.push({type:'text',content:normal.join('\n')}); normal=[]; } };
     for(let i=0;i<lines.length;i++){
-      const m=lines[i].trim().match(/^====\s*(VOLBA|HOD KOSTKOU|PLOCHA)\s*====$/i);
+      const m=lines[i].trim().match(/^====\s*(VOLBA|HOD KOSTKOU|PLOCHA|JESTLI)\s*====$/i);
       if(!m){ normal.push(lines[i]); continue; }
       flush();
       const label=m[1].toUpperCase();
-      const type=label==='VOLBA'?'choice':label==='PLOCHA'?'surface':'dice';
-      const end=type==='choice'?/^====\s*KONEC VOLBY\s*====$/i:type==='surface'?/^====\s*KONEC PLOCHY\s*====$/i:/^====\s*KONEC (?:HODU|HODU KOSTKOU|KOSTKY)\s*====$/i;
+      const type=label==='VOLBA'?'choice':label==='PLOCHA'?'surface':label==='JESTLI'?'condition':'dice';
+      const end=type==='choice'?/^====\s*KONEC VOLBY\s*====$/i:type==='surface'?/^====\s*KONEC PLOCHY\s*====$/i:type==='condition'?/^====\s*KONEC JESTLI\s*====$/i:/^====\s*KONEC (?:HODU|HODU KOSTKOU|KOSTKY)\s*====$/i;
       const body=[]; i++;
       while(i<lines.length&&!end.test(lines[i].trim())){ body.push(lines[i]); i++; }
       out.push({type,content:body.join('\n'),id:blockId(type,body.join('\n'),out.length)});
@@ -958,16 +1020,17 @@ using (auth.uid() = user_id);</textarea><button type="button" id="copy-sql">kop�
     return [...editor.querySelectorAll('[data-segment]')].map(el=>{
       const type=el.dataset.type, value=el.querySelector('textarea').value;
       if(type==='text') return value;
-      const marks={choice:['====VOLBA====','====KONEC VOLBY===='],dice:['====HOD KOSTKOU====','====KONEC HODU===='],surface:['====PLOCHA====','====KONEC PLOCHY====']};
+      const marks={choice:['====VOLBA====','====KONEC VOLBY===='],dice:['====HOD KOSTKOU====','====KONEC HODU===='],surface:['====PLOCHA====','====KONEC PLOCHY===='],condition:['====JESTLI====','====KONEC JESTLI====']};
       return marks[type][0]+'\n'+value+'\n'+marks[type][1];
     }).join('\n');
   }
   function countFor(type,value){
     if(type==='choice') return (value.split('\n').filter(x=>/^[A-Z]\s+\S/.test(x.trim())&&!/^=/.test(x.trim()))).length;
     if(type==='dice') return value.split('\n').filter(x=>/^\d+\s*-\s*\d+$/.test(x.trim())).length;
+    if(type==='condition') return /^JINAK\s*$/im.test(value)?2:1;
     return value.split('\n').filter(x=>/^[-*]\s*(?:click|klik)\s+/i.test(x.trim())).length;
   }
-  function countLabel(type,n){ return type==='choice'?`${n} možnost${n===1?'':n>=2&&n<=4?'i':'í'}`:type==='dice'?`${n} výsledk${n===1?'ek':n>=2&&n<=4?'y':'ů'}`:`${n} aktivní ${n===1?'bod':'body'}`; }
+  function countLabel(type,n){ return type==='choice'?`${n} možnost${n===1?'':n>=2&&n<=4?'i':'í'}`:type==='dice'?`${n} výsledk${n===1?'ek':n>=2&&n<=4?'y':'ů'}`:type==='condition'?(n===2?'if / else':'jen if, bez else'):`${n} aktivní ${n===1?'bod':'body'}`; }
   function render(text){
     editor.innerHTML=''; parseDocument(text).forEach((seg,i)=>editor.appendChild(createSegment(seg,i)));
     updateFooter();
@@ -978,20 +1041,22 @@ using (auth.uid() = user_id);</textarea><button type="button" id="copy-sql">kop�
     if(seg.type==='text'){
       wrap.innerHTML=`<div class="editable-wrap"><pre class="text-highlight" aria-hidden="true"></pre><textarea class="text-segment" spellcheck="false" aria-label="Text scénáře">${esc(seg.content)}</textarea></div>`;
     }else{
-      const titles={choice:'VOLBA',dice:'HOD KOSTKOU',surface:'PLOCHA'};
-      const actions={choice:'+ možnost',dice:'+ výsledek',surface:'+ interakce'};
+      const titles={choice:'VOLBA',dice:'HOD KOSTKOU',surface:'PLOCHA',condition:'JESTLI / JINAK'};
+      const actions={choice:'+ možnost',dice:'+ výsledek',surface:'+ interakce',condition:'+ jinak'};
       const id=seg.id||blockId(seg.type,seg.content,index); wrap.dataset.id=id;
       wrap.className=`special-block ${seg.type}${collapsed[id]?' collapsed':''}`;
-      wrap.innerHTML=`<header class="block-head"><button type="button" class="collapse" aria-label="Sbalit nebo rozbalit">${collapsed[id]?'▶':'▼'}</button><span class="block-title">${titles[seg.type]}</span><span class="block-count"></span><div class="block-tools"><button type="button" class="add-row">${actions[seg.type]}</button><button type="button" class="remove-block">odstranit</button></div></header><div class="block-content"><div class="editable-wrap"><pre class="text-highlight" aria-hidden="true"></pre><textarea class="special-body" spellcheck="false" aria-label="Obsah bloku ${titles[seg.type]}">${esc(seg.content)}</textarea></div>${seg.type==='surface'?'<div class="surface-preview"><div class="surface-preview-title">Interaktivní náhled plochy</div><div class="surface-items"></div></div>':''}</div>`;
+      wrap.innerHTML=`<header class="block-head"><button type="button" class="collapse" aria-label="Sbalit nebo rozbalit">${collapsed[id]?'▶':'▼'}</button><span class="block-title">${titles[seg.type]}</span><span class="block-count"></span><div class="block-tools">${seg.type!=='condition'?`<button type="button" class="add-row">${actions[seg.type]}</button>`:''}<button type="button" class="remove-block">odstranit</button></div></header><div class="block-content"><div class="editable-wrap"><pre class="text-highlight" aria-hidden="true"></pre><textarea class="special-body" spellcheck="false" aria-label="Obsah bloku ${titles[seg.type]}">${esc(seg.content)}</textarea></div>${seg.type==='surface'?'<div class="surface-preview"><div class="surface-preview-title">Interaktivní náhled plochy</div><div class="surface-items"></div></div>':''}</div>`;
     }
     const ta=wrap.querySelector('textarea');
     requestAnimationFrame(()=>{autoHeight(ta);updateHighlight(ta)});
     ta.addEventListener('input',()=>{ expandShortcut(ta); autoHeight(ta); updateHighlight(ta); updateBlock(wrap); changed(); });
+    ta.addEventListener('compositionend',()=>{ autoHeight(ta); updateHighlight(ta); updateBlock(wrap); });
+    ta.addEventListener('beforeinput',()=>{ requestAnimationFrame(()=>{ autoHeight(ta); updateHighlight(ta); }); });
     ta.addEventListener('keydown',e=>handleTab(e,ta));
     if(seg.type!=='text'){
       wrap.querySelector('.collapse').onclick=()=>{ const open=wrap.classList.toggle('collapsed'); collapsed[wrap.dataset.id]=open; wrap.querySelector('.collapse').textContent=open?'▶':'▼'; changed(); };
-      wrap.querySelector('.add-row').onclick=()=>addRow(wrap,ta);
-      wrap.querySelector('.remove-block').onclick=()=>{ if(confirm('Odstranit celý blok?')){wrap.remove();ensureTextSegment();changed();} };
+      if(seg.type!=='condition') wrap.querySelector('.add-row').onclick=()=>addRow(wrap,ta);
+      wrap.querySelector('.remove-block').onclick=()=>{ askDialog('Odstranit celý blok?').then(ok=>{ if(ok){wrap.remove();ensureTextSegment();changed();} }); };
       updateBlock(wrap);
     }
     return wrap;
@@ -1092,7 +1157,8 @@ using (auth.uid() = user_id);</textarea><button type="button" id="copy-sql">kop�
     const templates={
       choice:'A První možnost\nB Druhá možnost\n\n= A\n\n= B',
       dice:'1 - 3\nNeúspěch\n\n4 - 6\nÚspěch',
-      surface:'- click Mavris -> Scéna 1A\n- click Ruda -> Scéna 2A\n- click Vavřinec -> Scéna 3A'
+      surface:'- click Mavris -> Scéna 1A\n- click Ruda -> Scéna 2A\n- click Vavřinec -> Scéna 3A',
+      condition:'"mluvil s Vavřincem"\n\nDialog pokud ano.\n\nJINAK\n\nDialog pokud ne.'
     };
     const active=document.activeElement?.closest?.('[data-segment]');
     const node=createSegment({type,content:templates[type],id:blockId(type,Date.now().toString(),editor.children.length)},editor.children.length);
@@ -1190,8 +1256,78 @@ using (auth.uid() = user_id);</textarea><button type="button" id="copy-sql">kop�
   document.getElementById('insert-choice').onclick=()=>insertBlock('choice');
   document.getElementById('insert-dice').onclick=()=>insertBlock('dice');
   document.getElementById('insert-surface').onclick=()=>insertBlock('surface');
+  document.getElementById('insert-condition').onclick=()=>insertBlock('condition');
   function fullDocument(){captureActiveCard();return cards.map(card=>'# KARTA: '+card.title+'\n'+(card.content||'')).join('\n\n')}
-  function aiHeader(){return ['### AI INSTRUKCE — FORMÁT SCÉNÁŘE ###','# Scénář vizuální novely. Speciální bloky VOLBA, HOD KOSTKOU a PLOCHA zachovej včetně jejich koncových značek.','# Postavy: '+(characters.map(c=>c.name.toUpperCase()).join(', ')||'(žádné)')+'.','### KONEC INSTRUKCÍ ###','',''].join('\n')}
+  function aiHeader(){return ['### AI INSTRUKCE — FORMÁT SCÉNÁŘE ###','# Scénář vizuální novely. Speciální bloky VOLBA, HOD KOSTKOU, PLOCHA a JESTLI zachovej včetně jejich koncových značek.','# Blok JESTLI začíná řádkem s popisem podmínky v uvozovkách, např. "mluvil s Vavřincem", pak obsahuje dvě větve oddělené řádkem "JINAK" — první platí, pokud podmínka platí, druhá pokud ne.','# Postavy: '+(characters.map(c=>c.name.toUpperCase()).join(', ')||'(žádné)')+'.','### KONEC INSTRUKCÍ ###','',''].join('\n')}
+
+  function stripAiHeader(text){
+    return String(text||'').replace(/^\s*### AI INSTRUKCE[\s\S]*?### KONEC INSTRUKCÍ ###\s*\n*/,'');
+  }
+  function splitIntoCards(text){
+    const marker=/^#\s*KARTA:\s*(.+)$/gm;
+    const matches=[...text.matchAll(marker)];
+    if(!matches.length) return [{title:'Import',content:text.trim()}];
+    const parts=[];
+    if(matches[0].index>0){
+      const pre=text.slice(0,matches[0].index).trim();
+      if(pre) parts.push({title:'Import',content:pre});
+    }
+    matches.forEach((m,i)=>{
+      const start=m.index+m[0].length;
+      const end=i+1<matches.length?matches[i+1].index:text.length;
+      parts.push({title:m[1].trim()||'Import',content:text.slice(start,end).trim()});
+    });
+    return parts;
+  }
+  function suggestImportShortcut(name){
+    const base=(name.trim()[0]||'p').toLocaleLowerCase('cs-CZ').replace(/[^\p{L}\p{N}_-]/gu,'')||'p';
+    let sc=base,suffix=2;
+    while(characters.some(c=>String(c.shortcut).toLocaleLowerCase('cs-CZ')===sc)) sc=base+(suffix++);
+    return sc;
+  }
+  function normalizeCharacterName(rawName,mapping){
+    if(mapping.has(rawName)) return mapping.get(rawName);
+    const existing=characters.find(c=>c.name.trim().toLocaleLowerCase('cs-CZ')===rawName.toLocaleLowerCase('cs-CZ'));
+    const canonical=existing?existing.name:rawName;
+    if(!existing) characters.push({name:rawName,shortcut:suggestImportShortcut(rawName),color:'#c8a46b'});
+    mapping.set(rawName,canonical);
+    return canonical;
+  }
+  function rewriteCharacterNames(text,mapping){
+    return text.split('\n').map(line=>{
+      const m=line.match(/^([^:\n]{1,50}):(.*)$/);
+      if(!m) return line;
+      const name=m[1].trim();
+      if(!name) return line;
+      return normalizeCharacterName(name,mapping)+':'+m[2];
+    }).join('\n');
+  }
+  function importText(rawText){
+    const stripped=stripAiHeader(rawText);
+    if(!stripped.trim()){ flash('soubor je prázdný'); return; }
+    const mapping=new Map();
+    const importedCards=splitIntoCards(stripped).map(c=>({title:c.title,content:rewriteCharacterNames(c.content,mapping)}));
+    captureActiveCard();
+    const firstId=cardId();
+    importedCards.forEach((c,i)=>{
+      cards.push({id:i===0?firstId:cardId(),title:c.title,content:c.content});
+    });
+    activeCardId=firstId;
+    renderCharacters();
+    renderTabs();
+    render(currentCard().content||'');
+    changed();
+    flash('importováno: '+importedCards.length+(importedCards.length===1?' karta':' karty/karet'));
+  }
+  document.getElementById('import-btn').onclick=()=>document.getElementById('import-file').click();
+  document.getElementById('import-file').addEventListener('change',e=>{
+    const file=e.target.files[0];
+    if(!file) return;
+    const reader=new FileReader();
+    reader.onload=()=>{ importText(String(reader.result||'')); e.target.value=''; };
+    reader.onerror=()=>flash('import selhal');
+    reader.readAsText(file,'utf-8');
+  });
   document.getElementById('copy-btn').onclick=async()=>{try{await navigator.clipboard.writeText(fullDocument());flash('zkopírováno')}catch(e){flash('kopírování selhalo')}};
   document.getElementById('export-btn').onclick=()=>{const blob=new Blob([aiHeader()+fullDocument()],{type:'text/plain;charset=utf-8'}),u=URL.createObjectURL(blob),a=document.createElement('a');a.href=u;a.download='scenar-'+new Date().toISOString().slice(0,10)+'.txt';a.click();setTimeout(()=>URL.revokeObjectURL(u),1000)};
   const sidebar=document.getElementById('sidebar'),backdrop=document.getElementById('sidebar-backdrop'),toggle=document.getElementById('sidebar-toggle');function side(open){sidebar.classList.toggle('open',open);backdrop.classList.toggle('open',open);toggle.setAttribute('aria-expanded',String(open))}toggle.onclick=()=>side(!sidebar.classList.contains('open'));backdrop.onclick=()=>side(false);document.addEventListener('keydown',e=>{if(e.key==='Escape')side(false)});
@@ -1222,6 +1358,7 @@ using (auth.uid() = user_id);</textarea><button type="button" id="copy-sql">kop�
       <button type="button" data-insert="choice">volba</button>
       <button type="button" data-insert="dice">hod kostkou</button>
       <button type="button" data-insert="surface">plocha</button>
+      <button type="button" data-insert="condition">jestli / jinak</button>
     </div>`);
   }
   function mobileCardsMenu(){
@@ -1236,6 +1373,7 @@ using (auth.uid() = user_id);</textarea><button type="button" id="copy-sql">kop�
   }
   function mobileMoreMenu(){
     openMobileSheet('více',`<div class="mobile-list">
+      <button type="button" data-more="import">importovat scénář</button>
       <button type="button" data-more="copy">kopírovat scénář</button>
       <button type="button" data-more="export">stáhnout .txt</button>
       <button type="button" data-more="focus">režim soustředění</button>
@@ -1267,6 +1405,7 @@ using (auth.uid() = user_id);</textarea><button type="button" id="copy-sql">kop�
     const scene=event.target.closest('[data-scene]')?.dataset.scene;
     if(scene){closeMobileSheet();jumpToScene(scene);return;}
     const more=event.target.closest('[data-more]')?.dataset.more;
+    if(more==='import'){closeMobileSheet();document.getElementById('import-file').click();}
     if(more==='copy'){closeMobileSheet();document.getElementById('copy-btn').click();}
     if(more==='export'){closeMobileSheet();document.getElementById('export-btn').click();}
     if(more==='focus'){closeMobileSheet();document.body.classList.toggle('mobile-focus');}
@@ -1311,16 +1450,14 @@ using (auth.uid() = user_id);</textarea><button type="button" id="copy-sql">kop�
       return true;
     }catch(error){supabaseClient=null;setCloudState('chyba připojení: '+error.message,'error');return false;}
   }
-  function cloudDocumentId(){
-    let id=localStorage.getItem(CLOUD_DOCUMENT_KEY);
-    if(!id){id=crypto.randomUUID();localStorage.setItem(CLOUD_DOCUMENT_KEY,id);}
-    return id;
+  function cloudDocumentKey(){
+    return CLOUD_DOCUMENT_KEY;
   }
   function cloudPayload(){captureActiveCard();return {cards,activeCardId,characters,collapsed,version:2};}
   async function uploadCloud(showMessage=true){
     if(!supabaseClient||!cloudUser){if(showMessage)setCloudState('nejdřív se přihlas','error');return false;}
-    const row={id:cloudDocumentId(),user_id:cloudUser.id,title:'scenar.io',payload:cloudPayload(),updated_at:new Date().toISOString()};
-    const {error}=await supabaseClient.from('documents').upsert(row,{onConflict:'id'});
+    const row={user_id:cloudUser.id,document_key:cloudDocumentKey(),title:'scenar.io',payload:cloudPayload(),updated_at:new Date().toISOString()};
+    const {error}=await supabaseClient.from('documents').upsert(row,{onConflict:'user_id,document_key'});
     if(error){setCloudState('cloud save selhal: '+error.message,'error');return false;}
     if(showMessage)setCloudState('cloud uložen: '+new Date().toLocaleTimeString('cs-CZ',{hour:'2-digit',minute:'2-digit'}),'ok');
     return true;
@@ -1332,7 +1469,7 @@ using (auth.uid() = user_id);</textarea><button type="button" id="copy-sql">kop�
   }
   async function downloadCloud(){
     if(!supabaseClient||!cloudUser){setCloudState('nejdřív se přihlas','error');return;}
-    const {data,error}=await supabaseClient.from('documents').select('payload,updated_at').eq('id',cloudDocumentId()).maybeSingle();
+    const {data,error}=await supabaseClient.from('documents').select('payload,updated_at').eq('user_id',cloudUser.id).eq('document_key',cloudDocumentKey()).maybeSingle();
     if(error){setCloudState('načtení selhalo: '+error.message,'error');return;}
     if(!data){setCloudState('v cloudu zatím není uložený dokument','error');return;}
     const payload=data.payload||{};
@@ -1353,7 +1490,7 @@ using (auth.uid() = user_id);</textarea><button type="button" id="copy-sql">kop�
   document.getElementById('cloud-save-config').onclick=saveCloudConfig;
   document.getElementById('cloud-test').onclick=async()=>{
     if(!supabaseClient&&!saveCloudConfig())return;
-    const {error}=await supabaseClient.from('documents').select('id',{head:true,count:'exact'}).limit(1);
+    const {error}=await supabaseClient.from('documents').select('document_key',{head:true,count:'exact'}).limit(1);
     setCloudState(error?'test selhal: '+error.message:'připojení funguje',error?'error':'ok');
   };
   document.getElementById('cloud-sign-in').onclick=async()=>{
