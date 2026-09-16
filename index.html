@@ -2,7 +2,7 @@
 <html lang="cs">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content">
 <title>scenar.io — editor</title>
 <style>
 
@@ -613,6 +613,7 @@ body, button, input, textarea { font-size: var(--font-ui) !important; }
 /* Mobile variant (hide scene-navigator sidebar section, icon-only cloud button) is in the consolidated mobile block below. */
 
 
+/* Mobile speaker color patch: overlay enabled; native textarea shown only during IME composition. */
 /* ============================================================
    MOBILE (consolidated) — single source of truth, ≤720px.
    Replaces every earlier fragmented @media(max-width:720px)
@@ -625,10 +626,10 @@ body, button, input, textarea { font-size: var(--font-ui) !important; }
    ============================================================ */
 @media (max-width: 720px) {
   :root { --mobile-nav-h: 58px; --keyboard-height: 0px; }
-  html, body { height: 100%; overscroll-behavior: none; }
+  html, body { height: 100%; overscroll-behavior: none; background: var(--bg); }
   body {
-    height: var(--app-height, 100dvh);
-    min-height: var(--app-height, 100dvh);
+    height: 100dvh;
+    min-height: 100dvh;
     padding-bottom: 0;
   }
 
@@ -652,7 +653,7 @@ body, button, input, textarea { font-size: var(--font-ui) !important; }
   #cloud-btn::before { font-size: 13px; }
 
   /* --- layout shell --- */
-  .main { min-height: 0; height: calc(var(--app-height, 100dvh) - 44px); padding-bottom: var(--mobile-nav-h); }
+  .main { min-height: 0; height: calc(100dvh - 44px); padding-bottom: var(--mobile-nav-h); }
   .editor-shell { width: 100%; min-width: 0; }
   .document-tabs { min-height: 38px; height: 38px; padding: 0 6px; }
   .doc-tab { min-width: 82px; max-width: 132px; height: 36px; padding: 0 7px; }
@@ -666,24 +667,41 @@ body, button, input, textarea { font-size: var(--font-ui) !important; }
     scroll-padding-bottom: calc(var(--mobile-nav-h) + 20px);
     overflow-y: auto;
     overscroll-behavior-y: contain;
-    -webkit-overflow-scrolling: touch;
-    overflow-anchor: none;
-    scroll-behavior: auto;
   }
 
-  /* --- plain, fully visible textarea: no highlight overlay, no clipping --- */
+  /* --- plain, fully visible textarea: no highlight overlay, no clipping.
+     overflow-y:auto + max-height is a safety net: JS grows the box to fit
+     as you type, but if a resize is ever a frame late, the textarea's own
+     native scrolling keeps the caret visible instead of the line being
+     invisible until something bigger (like a pasted paragraph) forces a
+     reflow. This was the actual cause of "text not visible until I type a
+     whole paragraph". --- */
   .editable-wrap { overflow: visible; }
-  .editable-wrap .text-highlight { display: none !important; }
+  .editable-wrap .text-highlight {
+    display: block !important;
+    z-index: 1;
+    height: 100%;
+    overflow: hidden !important;
+    font-family: ui-monospace, "SFMono-Regular", "Cascadia Code", Consolas, "Liberation Mono", monospace;
+    font-size: 16px !important;
+    line-height: 1.55 !important;
+    letter-spacing: normal;
+    overflow-wrap: break-word;
+    word-break: break-word;
+    white-space: pre-wrap;
+  }
   .text-segment, .special-body {
     position: relative;
     z-index: 2;
     display: block;
     width: 100%;
-    color: var(--text) !important;
-    -webkit-text-fill-color: var(--text) !important;
+    max-height: 60vh;
+    color: transparent !important;
+    -webkit-text-fill-color: transparent !important;
     caret-color: var(--copper-strong) !important;
     background: transparent !important;
-    overflow: visible !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
     font-family: ui-monospace, "SFMono-Regular", "Cascadia Code", Consolas, "Liberation Mono", monospace;
     font-size: 16px !important;     /* prevents iOS auto-zoom-on-focus */
     line-height: 1.55 !important;
@@ -694,9 +712,20 @@ body, button, input, textarea { font-size: var(--font-ui) !important; }
     touch-action: manipulation;
   }
   .text-segment::selection, .special-body::selection {
+    color: transparent !important;
+    -webkit-text-fill-color: transparent !important;
+    background: rgba(200,164,107,.32) !important;
+  }
+  .editable-wrap.mobile-composing .text-highlight { visibility: hidden !important; }
+  .editable-wrap.mobile-composing .text-segment,
+  .editable-wrap.mobile-composing .special-body {
     color: var(--text) !important;
     -webkit-text-fill-color: var(--text) !important;
-    background: rgba(200,164,107,.32) !important;
+  }
+  .editable-wrap.mobile-composing .text-segment::selection,
+  .editable-wrap.mobile-composing .special-body::selection {
+    color: var(--text) !important;
+    -webkit-text-fill-color: var(--text) !important;
   }
   textarea:focus { scroll-margin-top: 12px; scroll-margin-bottom: calc(var(--keyboard-height, 0px) + 20px); }
 
@@ -751,12 +780,10 @@ body, button, input, textarea { font-size: var(--font-ui) !important; }
   .mobile-list button.current { color: var(--copper); border-color: var(--copper); }
   .mobile-list small { margin-left: auto; color: var(--text-faint); }
 
-  /* --- keyboard open: chrome gets out of the way automatically --- */
-  body.mobile-keyboard-open .topbar, body.mobile-keyboard-open .document-tabs, body.mobile-keyboard-open .mobile-nav { display: none !important; }
-  body.mobile-keyboard-open .main { height: var(--app-height, 100dvh); padding-bottom: 0; }
-  body.mobile-keyboard-open .block-editor { padding-bottom: 24px; }
-
-  /* --- focus mode (manual toggle from "více" menu) --- */
+  /* --- focus mode (manual toggle from "více" menu) — the one deliberate
+     way chrome hides itself; nothing hides automatically anymore, because
+     auto-hiding tied to keyboard/resize events is what caused the page to
+     jump and flash blank earlier. --- */
   body.mobile-focus .topbar, body.mobile-focus .document-tabs, body.mobile-focus .mobile-nav { display: none !important; }
   body.mobile-focus .main { padding-bottom: 0; }
   body.mobile-focus .block-editor { padding-bottom: 24px; }
@@ -1012,7 +1039,6 @@ alter publication supabase_realtime add table public.documents;</textarea><butto
     return safe || ' ';
   }
   function updateHighlight(ta){
-    if(window.matchMedia('(max-width:720px)').matches)return;
     const mirror=ta.parentElement?.querySelector('.text-highlight');
     if(!mirror)return;
     mirror.innerHTML=ta.value.split('\n').map(renderLine).join('\n');
@@ -1114,15 +1140,24 @@ alter publication supabase_realtime add table public.documents;</textarea><butto
     const ta=wrap.querySelector('textarea');
     requestAnimationFrame(()=>{autoHeight(ta);updateHighlight(ta)});
     let composing=false;
-    ta.addEventListener('compositionstart',()=>{composing=true;});
+    ta.addEventListener('compositionstart',()=>{
+      composing=true;
+      if(isMobile()) ta.parentElement?.classList.add('mobile-composing');
+    });
     ta.addEventListener('input',()=>{
       if(!composing)expandShortcut(ta);
-      if(!composing)requestAnimationFrame(()=>autoHeight(ta));
+      // Resize immediately, not on the next animation frame — a one-frame
+      // delay is exactly what let a just-typed line render outside the
+      // (not-yet-grown) box on iOS until something bigger forced a reflow.
+      if(!composing)autoHeight(ta);
       updateHighlight(ta);updateBlock(wrap);changed();
     });
     ta.addEventListener('compositionend',()=>{
-      composing=false;requestAnimationFrame(()=>autoHeight(ta));
-      updateHighlight(ta);updateBlock(wrap);changed();
+      composing=false;
+      autoHeight(ta);
+      updateHighlight(ta);
+      ta.parentElement?.classList.remove('mobile-composing');
+      updateBlock(wrap);changed();
     });
     ta.addEventListener('scroll',()=>{
       const mirror=wrap.querySelector('.text-highlight');
@@ -1457,42 +1492,31 @@ alter publication supabase_realtime add table public.documents;</textarea><butto
   const mobileSheetTitle=document.getElementById('mobile-sheet-title');
   const mobileSheetContent=document.getElementById('mobile-sheet-content');
   const isMobile=()=>window.matchMedia('(max-width:720px)').matches;
+  // The viewport meta tag now carries interactive-widget=resizes-content,
+  // which on modern iOS/Android makes the layout viewport itself shrink
+  // when the keyboard opens — so 100dvh in CSS already does the right
+  // thing on its own, and Safari's native "scroll focused input into
+  // view" behaves correctly inside that smaller viewport. We deliberately
+  // do NOT layer extra JS scrolling or class-toggling on top of that
+  // anymore: doing so previously fought the browser's own scroll/resize
+  // handling and produced a feedback loop (page jumping, blank gray area
+  // flashing behind the keyboard). The only thing left to JS is exposing
+  // the keyboard's height as a CSS variable, purely for padding — and
+  // it's heavily debounced so it can't itself trigger layout thrash.
   let viewportRaf=0;
   function updateMobileViewport(){
-    if(!isMobile()){document.body.classList.remove('mobile-keyboard-open');return;}
+    if(!isMobile())return;
     cancelAnimationFrame(viewportRaf);
     viewportRaf=requestAnimationFrame(()=>{
       const vv=window.visualViewport;
-      const height=Math.round(vv?vv.height:window.innerHeight);
-      document.documentElement.style.setProperty('--app-height',height+'px');
-      // Real height the on-screen keyboard is covering right now, so CSS
-      // can keep the caret area clear of it instead of guessing.
-      const keyboardHeight=Math.max(0,Math.round(window.innerHeight-height));
+      if(!vv)return;
+      const keyboardHeight=Math.max(0,Math.round(window.innerHeight-vv.height));
       document.documentElement.style.setProperty('--keyboard-height',keyboardHeight+'px');
-      // Keyboard is meaningfully open: get the top bar / tab strip / bottom
-      // nav out of the way so nothing else can cover the field being typed in.
-      document.body.classList.toggle('mobile-keyboard-open',keyboardHeight>80);
     });
   }
   window.visualViewport?.addEventListener('resize',updateMobileViewport);
-  window.visualViewport?.addEventListener('scroll',updateMobileViewport);
   window.addEventListener('orientationchange',updateMobileViewport);
   updateMobileViewport();
-  // Belt-and-braces: focus/blur on any editor textarea also toggles the
-  // keyboard-open state immediately, so chrome doesn't linger for a frame
-  // before visualViewport catches up (and still works if visualViewport
-  // isn't supported at all).
-  editor.addEventListener('focusin',e=>{
-    if(!e.target.matches('textarea'))return;
-    if(isMobile())document.body.classList.add('mobile-keyboard-open');
-    requestAnimationFrame(()=>e.target.scrollIntoView({block:'center',behavior:'auto'}));
-  });
-  editor.addEventListener('focusout',e=>{
-    if(!e.target.matches('textarea'))return;
-    setTimeout(()=>{
-      if(!editor.contains(document.activeElement))document.body.classList.remove('mobile-keyboard-open');
-    },50);
-  });
 
   function closeMobileSheet(){
     mobileSheet.classList.remove('open');
@@ -1569,7 +1593,7 @@ alter publication supabase_realtime add table public.documents;</textarea><butto
   });
   document.getElementById('mobile-sheet-close').onclick=closeMobileSheet;
   mobileSheetBackdrop.onclick=closeMobileSheet;
-  window.addEventListener('resize',()=>{if(!isMobile()){closeMobileSheet();document.body.classList.remove('mobile-focus');document.body.classList.remove('mobile-keyboard-open');}});
+  window.addEventListener('resize',()=>{if(!isMobile()){closeMobileSheet();document.body.classList.remove('mobile-focus');}});
   document.addEventListener('keydown',event=>{if(event.key==='Escape')closeMobileSheet();});
 
   const cloudModal=document.getElementById('cloud-modal');
