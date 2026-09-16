@@ -763,6 +763,28 @@ body, button, input, textarea { font-size: var(--font-ui) !important; }
 #cloud-btn.sync-error::before{color:var(--danger)}
 @media(max-width:720px){.scene-navigator{display:none!important}#cloud-btn{padding:3px;font-size:0!important}#cloud-btn::before{font-size:13px}}
 
+
+/* Mobile plain textarea mode: native caret and IME take priority over syntax overlay. */
+@media(max-width:720px){
+  .editable-wrap .text-highlight{display:none!important}
+  .text-segment,.special-body{
+    position:relative!important;
+    z-index:2!important;
+    color:var(--text)!important;
+    -webkit-text-fill-color:var(--text)!important;
+    caret-color:var(--copper-strong)!important;
+    background:transparent!important;
+    overflow:hidden!important;
+    touch-action:manipulation;
+  }
+  .text-segment::selection,.special-body::selection{
+    color:var(--text)!important;
+    -webkit-text-fill-color:var(--text)!important;
+    background:rgba(200,164,107,.32)!important;
+  }
+  .block-editor{overflow-anchor:none!important;scroll-behavior:auto!important}
+}
+
 </style>
 </head>
 <body>
@@ -922,20 +944,16 @@ alter publication supabase_realtime add table public.documents;</textarea><butto
   };
   const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   const autoHeight=el=>{
-    const selStart=el.selectionStart, selEnd=el.selectionEnd;
-    const editorScroll=editor.scrollTop;
-    const topBefore=el.getBoundingClientRect().top;
+    if(window.matchMedia('(max-width:720px)').matches){
+      const next=Math.max(40,el.scrollHeight);
+      if(Math.abs(el.offsetHeight-next)>2)el.style.height=next+'px';
+      return;
+    }
     el.style.height='0px';
     el.style.height=Math.max(28,el.scrollHeight)+'px';
     const mirror=el.parentElement?.querySelector('.text-highlight');
     if(mirror)mirror.style.height=el.style.height;
-    if(document.activeElement===el){
-      try{el.setSelectionRange(selStart,selEnd);}catch{}
-      const topAfter=el.getBoundingClientRect().top;
-      editor.scrollTop=editorScroll+(topAfter-topBefore);
-    }
   };
-
   function askDialog(message,options){
     options=options||{};
     const backdrop=document.getElementById('dialog-backdrop');
@@ -997,6 +1015,7 @@ alter publication supabase_realtime add table public.documents;</textarea><butto
     return safe || ' ';
   }
   function updateHighlight(ta){
+    if(window.matchMedia('(max-width:720px)').matches)return;
     const mirror=ta.parentElement?.querySelector('.text-highlight');
     if(!mirror)return;
     mirror.innerHTML=ta.value.split('\n').map(renderLine).join('\n');
@@ -1097,9 +1116,17 @@ alter publication supabase_realtime add table public.documents;</textarea><butto
     }
     const ta=wrap.querySelector('textarea');
     requestAnimationFrame(()=>{autoHeight(ta);updateHighlight(ta)});
-    ta.addEventListener('input',()=>{ expandShortcut(ta); autoHeight(ta); updateHighlight(ta); updateBlock(wrap); changed(); });
-    ta.addEventListener('compositionend',()=>{ autoHeight(ta); updateHighlight(ta); updateBlock(wrap); });
-    ta.addEventListener('beforeinput',()=>{ requestAnimationFrame(()=>{ autoHeight(ta); updateHighlight(ta); }); });
+    let composing=false;
+    ta.addEventListener('compositionstart',()=>{composing=true;});
+    ta.addEventListener('input',()=>{
+      if(!composing)expandShortcut(ta);
+      if(!composing)requestAnimationFrame(()=>autoHeight(ta));
+      updateHighlight(ta);updateBlock(wrap);changed();
+    });
+    ta.addEventListener('compositionend',()=>{
+      composing=false;requestAnimationFrame(()=>autoHeight(ta));
+      updateHighlight(ta);updateBlock(wrap);changed();
+    });
     ta.addEventListener('keydown',e=>handleTab(e,ta));
     if(seg.type!=='text'){
       wrap.querySelector('.collapse').onclick=()=>{ const open=wrap.classList.toggle('collapsed'); collapsed[wrap.dataset.id]=open; wrap.querySelector('.collapse').textContent=open?'▶':'▼'; changed(); };
@@ -1412,23 +1439,12 @@ alter publication supabase_realtime add table public.documents;</textarea><butto
     cancelAnimationFrame(viewportRaf);
     viewportRaf=requestAnimationFrame(()=>{
       const vv=window.visualViewport;
-      const height=vv?vv.height:window.innerHeight;
-      const keyboard=Math.max(0,window.innerHeight-height-(vv?.offsetTop||0));
+      const height=Math.round(vv?vv.height:window.innerHeight);
       document.documentElement.style.setProperty('--app-height',height+'px');
-      document.documentElement.style.setProperty('--keyboard-height',keyboard+'px');
-      const field=document.activeElement;
-      if(field?.matches?.('#editor textarea')){
-        const r=field.getBoundingClientRect();
-        const visibleBottom=height-12;
-        if(r.bottom>visibleBottom)editor.scrollTop+=r.bottom-visibleBottom;
-        else if(r.top<8)editor.scrollTop-=8-r.top;
-      }
     });
   }
   window.visualViewport?.addEventListener('resize',updateMobileViewport);
-  window.visualViewport?.addEventListener('scroll',updateMobileViewport);
   window.addEventListener('orientationchange',updateMobileViewport);
-  document.addEventListener('focusin',event=>{if(event.target.matches?.('#editor textarea'))setTimeout(updateMobileViewport,60);});
   updateMobileViewport();
 
   function closeMobileSheet(){
