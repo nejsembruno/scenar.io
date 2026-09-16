@@ -785,6 +785,42 @@ body, button, input, textarea { font-size: var(--font-ui) !important; }
   .block-editor{overflow-anchor:none!important;scroll-behavior:auto!important}
 }
 
+
+/* Mobile V3: single authoritative mobile layer */
+.mobile-insert-fab,.mobile-focus-exit{display:none}
+@media(max-width:720px){
+  :root{--mobile-nav-h:64px;--mobile-top-h:44px}
+  html,body{width:100%;height:100%;min-height:0;overflow:hidden;overscroll-behavior:none}
+  body{height:var(--app-height,100dvh)!important;min-height:0!important;padding:0!important}
+  .topbar{height:var(--mobile-top-h)!important;min-height:var(--mobile-top-h)!important;padding:5px 9px!important;flex-wrap:nowrap!important;gap:6px!important}
+  .topbar .path{flex:1 1 auto!important;min-width:0!important;overflow:hidden!important;text-overflow:ellipsis!important;font-size:12px!important}
+  .topbar .status{order:initial!important;flex:0 0 auto!important;flex-basis:auto!important;margin-left:auto!important;font-size:0!important}
+  #copy-btn,#export-btn,#import-btn,#sidebar-toggle{display:none!important}
+  #cloud-btn{flex:0 0 24px!important;width:24px!important;min-height:32px!important;padding:0!important;font-size:0!important}
+  #cloud-btn::before{font-size:13px!important}
+  .main{height:auto!important;min-height:0!important;flex:1 1 auto!important;padding:0!important;overflow:hidden!important}
+  .sidebar,.sidebar-backdrop{display:none!important}
+  .editor-shell{display:flex!important;width:100%!important;min-width:0!important;height:100%!important;min-height:0!important}
+  .document-tabs{min-height:38px!important;height:38px!important;padding:0 6px!important}
+  .doc-tab{min-width:82px!important;max-width:138px!important;height:36px!important;padding:0 7px!important}
+  .block-editor{flex:1 1 auto!important;height:auto!important;min-height:0!important;padding:8px 6px calc(var(--mobile-nav-h) + 74px + env(safe-area-inset-bottom))!important;overflow-x:hidden!important;overflow-y:auto!important;overscroll-behavior-y:contain!important;overflow-anchor:none!important;-webkit-overflow-scrolling:touch;scroll-behavior:auto!important}
+  .editable-wrap{overflow:visible!important}.editable-wrap .text-highlight{display:none!important}
+  .text-segment,.special-body{position:relative!important;z-index:2!important;width:100%!important;color:var(--text)!important;-webkit-text-fill-color:var(--text)!important;caret-color:var(--copper-strong)!important;background:transparent!important;font-size:16px!important;line-height:1.55!important;overflow:hidden!important;touch-action:manipulation}
+  .special-block{contain:none!important;overflow:visible!important;margin:9px 0 12px!important}
+  .block-head{display:grid!important;grid-template-columns:24px minmax(0,auto) minmax(0,1fr) auto!important;align-items:center!important;gap:5px!important;min-height:42px!important;padding:5px 6px!important;flex-wrap:nowrap!important}
+  .block-title{max-width:none!important;overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important}.block-count{min-width:0!important;overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important}
+  .block-tools{display:flex!important;width:auto!important;margin:0!important;gap:4px!important}.block-tools button{min-height:34px!important;padding:4px 7px!important;font-size:10px!important}.block-tools .remove-block{display:inline-flex!important;align-items:center!important}
+  .block-content{padding:9px 8px 10px!important}.surface-items{grid-template-columns:1fr!important}.surface-hotspot{min-height:42px!important}.footer{display:none!important}
+  .mobile-nav{position:fixed!important;z-index:30!important;left:0!important;right:0!important;bottom:0!important;display:grid!important;grid-template-columns:repeat(4,1fr)!important;min-height:var(--mobile-nav-h)!important;padding:5px 5px calc(5px + env(safe-area-inset-bottom))!important;background:var(--bg)!important;border-top:1px solid var(--line)!important;backdrop-filter:none!important}
+  .mobile-nav button{display:flex!important;align-items:center!important;justify-content:center!important;min-width:0!important;min-height:48px!important;padding:4px 2px!important;border:0!important;color:var(--text-faint)!important;background:transparent!important;font-size:10px!important}.mobile-nav button.active{color:var(--copper)!important;background:var(--panel)!important}
+  .mobile-insert-fab{position:fixed;z-index:31;right:14px;bottom:calc(var(--mobile-nav-h) + 12px + env(safe-area-inset-bottom));display:inline-flex;align-items:center;justify-content:center;min-width:104px;min-height:44px;padding:8px 13px;color:var(--copper-strong);background:var(--panel-2);border:1px solid #725c3c;box-shadow:0 4px 18px rgba(0,0,0,.3)}
+  .mobile-sheet-backdrop{z-index:40!important}.mobile-sheet{z-index:41!important;max-height:min(78dvh,680px)!important}.mobile-sheet-content{padding:10px!important}.mobile-menu-grid{gap:8px!important}.mobile-menu-grid button,.mobile-list button{min-height:48px!important}
+  .mobile-character-form{display:grid;grid-template-columns:54px minmax(0,1fr) 42px;gap:7px;margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}.mobile-character-form input{min-width:0;min-height:42px;padding:7px;color:var(--text);background:var(--input);border:1px solid var(--line);border-radius:3px}.mobile-character-form input[type=color]{width:42px;padding:3px}.mobile-character-form button{grid-column:1/-1;min-height:44px;color:var(--copper)}
+  .mobile-char-row{display:grid;grid-template-columns:10px 38px minmax(0,1fr) 38px 38px;align-items:center;gap:7px;min-height:48px;padding:5px 2px;border-bottom:1px solid var(--line-soft)}.mobile-char-row strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--copper)}.mobile-char-row input[type=color]{width:34px;height:34px;padding:2px;background:var(--bg);border:1px solid var(--line)}.mobile-char-row button{width:34px;min-height:34px;padding:0;color:var(--danger)}
+  .mobile-focus-exit{position:fixed;z-index:35;top:8px;right:8px;display:none;min-height:38px;color:var(--copper);background:var(--panel);border-color:var(--copper)}body.mobile-focus .mobile-focus-exit{display:inline-flex!important;align-items:center!important}
+  body.mobile-focus .topbar,body.mobile-focus .document-tabs,body.mobile-focus .mobile-nav,body.mobile-focus .mobile-insert-fab{display:none!important}body.mobile-focus .main{padding:0!important}body.mobile-focus .block-editor{padding:16px 8px 32px!important}
+}
+
 </style>
 </head>
 <body>
@@ -1723,5 +1759,33 @@ alter publication supabase_realtime add table public.documents;</textarea><butto
 })();
 </script>
 
+<script>
+
+/* Mobile V3 controller */
+(function(){
+'use strict';
+const mq=matchMedia('(max-width:720px)'),nav=document.querySelector('.mobile-nav'),sheet=document.getElementById('mobile-sheet'),backdrop=document.getElementById('mobile-sheet-backdrop'),title=document.getElementById('mobile-sheet-title'),content=document.getElementById('mobile-sheet-content');
+if(!nav||!sheet||!content)return;
+let ctx=null;const esc=s=>String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+function remember(el=document.activeElement){if(el?.matches?.('#editor textarea'))ctx={el,start:el.selectionStart,end:el.selectionEnd};}
+document.addEventListener('focusin',e=>remember(e.target),true);document.addEventListener('selectionchange',()=>remember(),true);
+function restore(){if(!ctx?.el?.isConnected)return false;ctx.el.focus({preventScroll:true});ctx.el.setSelectionRange(ctx.start,ctx.end);return true;}
+function close(){sheet.classList.remove('open');backdrop.classList.remove('open');sheet.setAttribute('aria-hidden','true');}
+function open(t,html){remember();title.textContent=t;content.innerHTML=html;sheet.classList.add('open');backdrop.classList.add('open');sheet.setAttribute('aria-hidden','false');requestAnimationFrame(()=>sheet.querySelector('button')?.focus({preventScroll:true}));}
+function source(id){close();requestAnimationFrame(()=>{restore();document.getElementById(id)?.click();});}
+nav.innerHTML='<button type="button" class="active" data-v3="editor">editor</button><button type="button" data-v3="scenes">scény</button><button type="button" data-v3="characters">postavy</button><button type="button" data-v3="more">více</button>';
+const fab=document.createElement('button');fab.type='button';fab.className='mobile-insert-fab';fab.textContent='+ přidat';document.body.appendChild(fab);const exit=document.createElement('button');exit.type='button';exit.className='mobile-focus-exit';exit.textContent='zpět do editoru';document.body.appendChild(exit);
+function inserts(){open('rychlé vložení','<div class="mobile-menu-grid"><button data-insert-id="insert-scene"># scéna</button><button data-insert-id="insert-action">// akce</button><button data-insert-id="insert-choice">volba</button><button data-insert-id="insert-dice">hod kostkou</button><button data-insert-id="insert-surface">plocha</button><button data-insert-id="insert-condition">jestli / jinak</button></div>');}
+function scenes(){const text=[...document.querySelectorAll('#editor textarea')].map(x=>x.value).join('\n'),seen=new Set(),a=[...text.matchAll(/^#\s*(?:Sc[eé]na\s+)?(.+)$/gmi)].map(m=>m[1].trim()).filter(n=>n&&!/^KARTA:/i.test(n)&&!seen.has(n.toLowerCase())&&seen.add(n.toLowerCase()));open('scény','<div class="mobile-list">'+(a.length?a.map(n=>'<button data-scene="'+esc(n)+'"># '+esc(n)+'</button>').join(''):'<div class="char-empty">V této kartě nejsou scény.</div>')+'</div>');}
+function chars(){const rows=[...document.querySelectorAll('#char-list .char-row')].map((r,i)=>{const c=r.querySelector('.color-edit')?.value||'#c8a46b',s=(r.querySelector('.shortcut')?.textContent||'').replace(':','').trim(),n=r.querySelector('.name')?.textContent||'';return '<div class="mobile-char-row"><span class="char-dot" style="background:'+c+'"></span><small>'+esc(s)+':</small><strong>'+esc(n)+'</strong><input type="color" value="'+c+'" data-color="'+i+'"><button data-remove="'+i+'">×</button></div>';}).join('');open('postavy','<div>'+(rows||'<div class="char-empty">Zatím žádné postavy.</div>')+'</div><div class="mobile-character-form"><input id="m-shortcut" maxlength="4" placeholder="b"><input id="m-name" placeholder="jméno postavy"><input id="m-color" type="color" value="#c8a46b"><button data-add>+ přidat postavu</button></div>');}
+function more(){const tabs=[...document.querySelectorAll('#tabs-list .doc-tab')].map(t=>'<button data-tab="'+esc(t.dataset.id)+'" class="'+(t.classList.contains('active')?'current':'')+'"><span>'+esc(t.querySelector('.tab-name')?.textContent||'Karta')+'</span>'+(t.classList.contains('active')?'<small>otevřená</small>':'')+'</button>').join('');open('více','<div class="menu-label">Karty</div><div class="mobile-list">'+tabs+'<button data-new>+ nová karta</button></div><div class="menu-label">Soubor a zobrazení</div><div class="mobile-list"><button data-more="cloud">cloud a účet</button><button data-more="import">importovat scénář</button><button data-more="copy">kopírovat scénář</button><button data-more="export">stáhnout .txt</button><button data-more="focus">režim soustředění</button></div>');}
+nav.addEventListener('click',e=>{const a=e.target.closest('[data-v3]')?.dataset.v3;if(!a)return;e.preventDefault();e.stopImmediatePropagation();nav.querySelectorAll('button').forEach(b=>b.classList.toggle('active',b.dataset.v3===a));if(a==='editor'){close();restore();}if(a==='scenes')scenes();if(a==='characters')chars();if(a==='more')more();},true);
+fab.onclick=inserts;exit.onclick=()=>document.body.classList.remove('mobile-focus');backdrop.addEventListener('click',close,true);document.getElementById('mobile-sheet-close')?.addEventListener('click',close,true);
+content.addEventListener('click',e=>{const id=e.target.closest('[data-insert-id]')?.dataset.insertId;if(id){e.stopImmediatePropagation();source(id);return;}const sc=e.target.closest('[data-scene]')?.dataset.scene;if(sc){e.stopImmediatePropagation();close();requestAnimationFrame(()=>{const target=[...document.querySelectorAll('#editor textarea')].find(x=>x.value.split('\n').some(l=>l.replace(/^#\s*(?:Sc[eé]na\s+)?/i,'').trim()===sc));if(target){const i=target.value.search(new RegExp('^#\\s*(?:Sc[eé]na\\s+)?'+sc.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'\\s*$','im'));target.focus();target.setSelectionRange(i,i+sc.length+2);target.scrollIntoView({block:'center'});}});return;}const tab=e.target.closest('[data-tab]')?.dataset.tab;if(tab){e.stopImmediatePropagation();close();document.querySelector('.doc-tab[data-id="'+CSS.escape(tab)+'"]')?.click();return;}if(e.target.closest('[data-new]')){e.stopImmediatePropagation();close();document.getElementById('add-tab')?.click();return;}const rm=e.target.closest('[data-remove]');if(rm){document.querySelectorAll('#char-list .remove')[+rm.dataset.remove]?.click();requestAnimationFrame(chars);return;}if(e.target.closest('[data-add]')){const n=document.getElementById('m-name');if(!n.value.trim()){n.focus();return;}document.getElementById('new-name').value=n.value;document.getElementById('new-shortcut').value=document.getElementById('m-shortcut').value;document.getElementById('new-color').value=document.getElementById('m-color').value;document.getElementById('add-char-btn').click();requestAnimationFrame(chars);return;}const m=e.target.closest('[data-more]')?.dataset.more;if(!m)return;e.stopImmediatePropagation();close();if(m==='cloud')document.getElementById('cloud-btn')?.dispatchEvent(new MouseEvent('click',{bubbles:true,altKey:true}));if(m==='import')document.getElementById('import-file')?.click();if(m==='copy')document.getElementById('copy-btn')?.click();if(m==='export')document.getElementById('export-btn')?.click();if(m==='focus')document.body.classList.add('mobile-focus');},true);
+content.addEventListener('input',e=>{const c=e.target.closest('[data-color]');if(c){const s=document.querySelectorAll('#char-list .color-edit')[+c.dataset.color];if(s){s.value=c.value;s.dispatchEvent(new Event('input',{bubbles:true}));}}});
+let raf=0,last=0;function viewport(){if(!mq.matches)return;cancelAnimationFrame(raf);raf=requestAnimationFrame(()=>{const h=Math.round(visualViewport?.height||innerHeight);if(Math.abs(h-last)>2){last=h;document.documentElement.style.setProperty('--app-height',h+'px');}});}visualViewport?.addEventListener('resize',viewport,{passive:true});addEventListener('orientationchange',viewport,{passive:true});viewport();
+})();
+
+</script>
 </body>
 </html>
