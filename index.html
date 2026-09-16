@@ -825,9 +825,9 @@ body, button, input, textarea { font-size: var(--font-ui) !important; }
   <section class="cloud-modal" id="cloud-modal" aria-hidden="true" aria-label="Nastavení Supabase">
     <header class="cloud-modal-head"><strong>supabase</strong><button type="button" id="cloud-close" aria-label="Zavřít">×</button></header>
     <div class="cloud-modal-body">
-      <label>Project URL<input id="supabase-url" type="url" placeholder="https://example.supabase.co" autocomplete="url"></label>
-      <label>Anon public key<input id="supabase-key" type="password" placeholder="eyJ..." autocomplete="off"></label>
-      <div class="cloud-config-actions"><button type="button" id="cloud-save-config">uložit připojení</button><button type="button" id="cloud-test">otestovat</button></div>
+      <input id="supabase-url" type="hidden" value="https://lagnbrtaexnuxdgiitgs.supabase.co">
+      <label>Publishable / anon key (jen jednou na zařízení)<input id="supabase-key" type="password" placeholder="sb_publishable_... nebo eyJ..." autocomplete="off"></label>
+      <div class="cloud-config-actions"><button type="button" id="cloud-save-config">uložit klíč</button><button type="button" id="cloud-test">otestovat</button></div>
       <div class="cloud-divider"></div>
       <label>E-mail<input id="cloud-email" type="email" placeholder="name@example.com" autocomplete="email"></label>
       <label>Heslo<input id="cloud-password" type="password" minlength="6" autocomplete="current-password"></label>
@@ -846,22 +846,10 @@ body, button, input, textarea { font-size: var(--font-ui) !important; }
 
 alter table public.documents enable row level security;
 
-create policy "users read own docs"
-on public.documents for select
-using (auth.uid() = user_id);
-
-create policy "users insert own docs"
-on public.documents for insert
-with check (auth.uid() = user_id);
-
-create policy "users update own docs"
-on public.documents for update
-using (auth.uid() = user_id)
-with check (auth.uid() = user_id);
-
-create policy "users delete own docs"
-on public.documents for delete
-using (auth.uid() = user_id);</textarea><button type="button" id="copy-sql">kopírovat SQL</button></details>
+create policy "users read own docs" on public.documents for select using (auth.uid() = user_id);
+create policy "users insert own docs" on public.documents for insert with check (auth.uid() = user_id);
+create policy "users update own docs" on public.documents for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
+create policy "users delete own docs" on public.documents for delete using (auth.uid() = user_id);</textarea><button type="button" id="copy-sql">kopírovat SQL</button></details>
     </div>
   </section>
   <div class="footer" id="footer">0 řádků · 0 znaků</div>
@@ -879,6 +867,8 @@ using (auth.uid() = user_id);</textarea><button type="button" id="copy-sql">kop�
   let characters=[], collapsed={}, saveTimer=null, lastStatus={text:'',state:'saved'}, cards=[], activeCardId=null;
   const CLOUD_CONFIG_KEY='scenar.io:supabase';
   const CLOUD_DOCUMENT_KEY='main';
+  const SUPABASE_URL='https://lagnbrtaexnuxdgiitgs.supabase.co';
+  let appReady=false, cloudBootstrapped=false, applyingCloud=false;
   let supabaseClient=null, cloudUser=null, cloudSaveTimer=null;
 
   const storage={
@@ -1430,54 +1420,90 @@ using (auth.uid() = user_id);</textarea><button type="button" id="copy-sql">kop�
     cloudButton.classList.toggle('connected',Boolean(cloudUser));
   }
   function getCloudConfig(){
-    try{return JSON.parse(localStorage.getItem(CLOUD_CONFIG_KEY)||'null')}catch{return null}
+    try{
+      const saved=JSON.parse(localStorage.getItem(CLOUD_CONFIG_KEY)||'null');
+      return saved?.key?{url:SUPABASE_URL,key:saved.key}:null;
+    }catch{return null}
   }
   function saveCloudConfig(){
-    const config={url:cloudUrl.value.trim(),key:cloudKey.value.trim()};
-    if(!config.url||!config.key){setCloudState('doplň Project URL a anon key','error');return false;}
-    localStorage.setItem(CLOUD_CONFIG_KEY,JSON.stringify(config));
+    const key=cloudKey.value.trim();
+    if(!key){setCloudState('doplň publishable / anon key','error');return false;}
+    localStorage.setItem(CLOUD_CONFIG_KEY,JSON.stringify({url:SUPABASE_URL,key}));
     initSupabase();
     return true;
   }
-  function initSupabase(){
+  async function initSupabase(){
     const config=getCloudConfig();
-    if(!config?.url||!config?.key||!window.supabase){supabaseClient=null;setCloudState('cloud není nastaven');return false;}
+    cloudUrl.value=SUPABASE_URL;
+    if(!config?.key||!window.supabase){
+      supabaseClient=null;
+      setCloudState(config?.key?'knihovna Supabase se nenačetla':'jednorázově vlož publishable / anon key',config?.key?'error':'');
+      return false;
+    }
     try{
-      supabaseClient=window.supabase.createClient(config.url,config.key,{auth:{persistSession:true,autoRefreshToken:true}});
-      cloudUrl.value=config.url; cloudKey.value=config.key;
-      supabaseClient.auth.getSession().then(({data})=>{cloudUser=data.session?.user||null;setCloudState(cloudUser?'přihlášen: '+cloudUser.email:'připojeno, uživatel není přihlášen',cloudUser?'ok':'');});
-      supabaseClient.auth.onAuthStateChange((_event,session)=>{cloudUser=session?.user||null;setCloudState(cloudUser?'přihlášen: '+cloudUser.email:'připojeno, uživatel není přihlášen',cloudUser?'ok':'');});
+      supabaseClient=window.supabase.createClient(SUPABASE_URL,config.key,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
+      cloudKey.value=config.key;
+      const {data,error}=await supabaseClient.auth.getSession();
+      if(error) throw error;
+      cloudUser=data.session?.user||null;
+      setCloudState(cloudUser?'přihlášen: '+cloudUser.email+' · automatická synchronizace':'připojeno · přihlas se jen jednou',cloudUser?'ok':'');
+      supabaseClient.auth.onAuthStateChange((event,session)=>{
+        cloudUser=session?.user||null;
+        cloudBootstrapped=false;
+        setCloudState(cloudUser?'přihlášen: '+cloudUser.email+' · automatická synchronizace':'připojeno · přihlas se jen jednou',cloudUser?'ok':'');
+        if(cloudUser&&appReady&&(event==='SIGNED_IN'||event==='INITIAL_SESSION'||event==='TOKEN_REFRESHED')) setTimeout(syncCloudOnStart,0);
+      });
+      if(cloudUser&&appReady) await syncCloudOnStart();
       return true;
     }catch(error){supabaseClient=null;setCloudState('chyba připojení: '+error.message,'error');return false;}
   }
-  function cloudDocumentKey(){
-    return CLOUD_DOCUMENT_KEY;
-  }
+  function cloudDocumentKey(){ return CLOUD_DOCUMENT_KEY; }
   function cloudPayload(){captureActiveCard();return {cards,activeCardId,characters,collapsed,version:2};}
   async function uploadCloud(showMessage=true){
     if(!supabaseClient||!cloudUser){if(showMessage)setCloudState('nejdřív se přihlas','error');return false;}
     const row={user_id:cloudUser.id,document_key:cloudDocumentKey(),title:'scenar.io',payload:cloudPayload(),updated_at:new Date().toISOString()};
     const {error}=await supabaseClient.from('documents').upsert(row,{onConflict:'user_id,document_key'});
     if(error){setCloudState('cloud save selhal: '+error.message,'error');return false;}
-    if(showMessage)setCloudState('cloud uložen: '+new Date().toLocaleTimeString('cs-CZ',{hour:'2-digit',minute:'2-digit'}),'ok');
+    setCloudState((showMessage?'cloud uložen: ':'synchronizováno: ')+new Date().toLocaleTimeString('cs-CZ',{hour:'2-digit',minute:'2-digit'}),'ok');
     return true;
   }
   function queueCloudSave(){
-    if(!supabaseClient||!cloudUser)return;
+    if(applyingCloud||!supabaseClient||!cloudUser)return;
     clearTimeout(cloudSaveTimer);
     cloudSaveTimer=setTimeout(()=>uploadCloud(false),1000);
+  }
+  async function applyCloudPayload(data){
+    const payload=data?.payload||{};
+    applyingCloud=true;
+    cards=Array.isArray(payload.cards)&&payload.cards.length?payload.cards:cards;
+    activeCardId=payload.activeCardId&&cards.some(card=>card.id===payload.activeCardId)?payload.activeCardId:cards[0]?.id;
+    characters=Array.isArray(payload.characters)?payload.characters:characters;
+    collapsed=payload.collapsed||{};
+    renderCharacters();renderTabs();render(currentCard()?.content||'');
+    captureActiveCard();
+    await storage.set(STORAGE_KEY,JSON.stringify({cards,activeCardId,characters,collapsed,updatedAt:data.updated_at||new Date().toISOString()}));
+    applyingCloud=false;
+  }
+  async function syncCloudOnStart(){
+    if(cloudBootstrapped||!supabaseClient||!cloudUser||!appReady)return;
+    cloudBootstrapped=true;
+    setCloudState('synchronizuji…');
+    const {data,error}=await supabaseClient.from('documents').select('payload,updated_at').eq('user_id',cloudUser.id).eq('document_key',cloudDocumentKey()).maybeSingle();
+    if(error){cloudBootstrapped=false;setCloudState('automatická synchronizace selhala: '+error.message,'error');return;}
+    if(data){
+      await applyCloudPayload(data);
+      setCloudState('synchronizováno: '+new Date(data.updated_at).toLocaleString('cs-CZ'),'ok');
+    }else{
+      const ok=await uploadCloud(false);
+      setCloudState(ok?'první cloudová kopie vytvořena':'první synchronizace selhala',ok?'ok':'error');
+    }
   }
   async function downloadCloud(){
     if(!supabaseClient||!cloudUser){setCloudState('nejdřív se přihlas','error');return;}
     const {data,error}=await supabaseClient.from('documents').select('payload,updated_at').eq('user_id',cloudUser.id).eq('document_key',cloudDocumentKey()).maybeSingle();
     if(error){setCloudState('načtení selhalo: '+error.message,'error');return;}
     if(!data){setCloudState('v cloudu zatím není uložený dokument','error');return;}
-    const payload=data.payload||{};
-    cards=Array.isArray(payload.cards)&&payload.cards.length?payload.cards:cards;
-    activeCardId=payload.activeCardId&&cards.some(card=>card.id===payload.activeCardId)?payload.activeCardId:cards[0]?.id;
-    characters=Array.isArray(payload.characters)?payload.characters:characters;
-    collapsed=payload.collapsed||{};
-    renderCharacters();renderTabs();render(currentCard()?.content||'');await save();
+    await applyCloudPayload(data);
     setCloudState('cloud načten: '+new Date(data.updated_at).toLocaleString('cs-CZ'),'ok');
     closeCloudModal();
   }
@@ -1511,7 +1537,6 @@ using (auth.uid() = user_id);</textarea><button type="button" id="copy-sql">kop�
   document.addEventListener('keydown',event=>{if(event.key==='Escape')closeCloudModal();});
 
   async function init(){
-    initSupabase();
     let legacyContent='';
     try{
       const r=await storage.get(STORAGE_KEY);
@@ -1527,6 +1552,8 @@ using (auth.uid() = user_id);</textarea><button type="button" id="copy-sql">kop�
     }catch(e){}
     if(!cards.length){cards=[{id:cardId(),title:'Scénář',content:legacyContent}];activeCardId=cards[0].id;}
     renderCharacters();renderTabs();render(currentCard().content||'');setStatus(currentCard().content?'načteno':'nový soubor');
+    appReady=true;
+    await initSupabase();
   }
   window.addEventListener('pagehide',()=>{clearTimeout(saveTimer);save()});init();
 })();
